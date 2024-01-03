@@ -50,7 +50,7 @@ var networks = {"SSH-Snake": {
         "shared_name" : "10.144.39.76",
         "name" : "10.144.39.76",
         "viz_shape" : "rectangle",
-        "viz_color" : "lightgrey",
+        "viz_color" : "#00BFFF",
         "SUID" : 14830,
         "style" : "filled",
         "selected" : true
