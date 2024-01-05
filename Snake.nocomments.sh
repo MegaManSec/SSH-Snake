@@ -138,22 +138,22 @@ function is_func_line() {
 for (i in funcs) {
 if ($0 ~ "^" funcs[i] "\\(\\)") {
 return 1
-}
-}
+ }
+ }
 return 0
-}
+ }
 function is_func_call() {
 for (i in funcs) {
 if ($0 ~ "^[[:space:]]*" funcs[i]) {
 return 1
-}
-}
+ }
+ }
 return 0
-}
+ }
 BEGIN {
 split(fnames, funcs, " ");
 in_func = 0
-}
+ }
 is_func_line() { in_func = 1; next }
 /^\}/ { if (in_func) { in_func = 0; next } }
 is_func_call() { next }
@@ -169,9 +169,9 @@ user = $1
 for (i = 2; i <= NF; i++) {
 if ($i != "" && user != "") {
 print "\\x22" user "@" $i "\\x22"
-}
-}
-}'
+ }
+ }
+ }'
 done
 for ssh_dest in "${!root_ssh_hosts_dests[@]}"; do
 printf "\\\x22%s\\\x22\n" "$ssh_dest"
