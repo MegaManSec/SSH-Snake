@@ -9,7 +9,7 @@ import heapq
 from collections import defaultdict
 import argparse
 
-def indirect_get_connected_nodes(graph, interesting_host):
+def indirect_get_connected_nodes(graph, interesting_host, ignore_dest_user):
     backward_connected_nodes = set()
     sentinel = '__SENTINEL__'
 
@@ -23,7 +23,10 @@ def indirect_get_connected_nodes(graph, interesting_host):
                 heapq.heappush(backward_heap, (parent_node, sentinel))
             if current_node in graph:
                 for connection in graph[current_node]:
-                    node = connection[1]  # Assuming the second element in the tuple is the source host (so find it as a dest)
+                    if ignore_dest_user:
+                        node = connection[1] # host
+                    else:
+                        node = f"{connection[0]}@{connection[1]}" # user@host
                     heapq.heappush(backward_heap, (node, current_node))
 
     return backward_connected_nodes
@@ -57,7 +60,7 @@ def build_lookup_table(input_lines, ignore_dest_user):
 
             line_to_add = (user, host, path, dest_user, dest_host)
             if ignore_dest_user:
-                graph[dest_host].append(line_to_add)
+                graph[dest_host].add(line_to_add)
             else:
                 graph[f"{dest_user}@{dest_host}"].add(line_to_add)
 
@@ -96,7 +99,7 @@ if __name__ == "__main__":
                 user, host, path, dest_user, dest_host = entry
                 print(f"{user}@{host}{path} -> {dest_user}@{dest_host}")
         else:
-            result = indirect_get_connected_nodes(reverse_lookup_table, interesting_host)
+            result = indirect_get_connected_nodes(reverse_lookup_table, interesting_host, ignore_dest_user)
             for entry in result:
                 print(entry)
     else:

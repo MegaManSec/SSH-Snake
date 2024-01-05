@@ -9,24 +9,27 @@ import heapq
 from collections import defaultdict
 import argparse
 
-def indirect_get_connected_nodes(graph, interesting_host):
-    backward_connected_nodes = set()
+def indirect_get_connected_nodes(graph, interesting_host, ignore_dest_user):
+    connected_nodes = set()
     sentinel = '__SENTINEL__'
 
-    backward_heap = [(interesting_host, sentinel)]
-    while backward_heap:
-        current_node, parent_node = heapq.heappop(backward_heap)
+    heap = [(interesting_host, sentinel)]
+    while heap:
+        current_node, parent_node = heapq.heappop(heap)
 
-        if current_node not in backward_connected_nodes:
-            backward_connected_nodes.add(current_node)
+        if current_node not in connected_nodes:
+            connected_nodes.add(current_node)
             if parent_node is not sentinel:
-                heapq.heappush(backward_heap, (parent_node, sentinel))
+                heapq.heappush(heap, (parent_node, sentinel))
             if current_node in graph:
                 for connection in graph[current_node]:
-                    node = connection[4]  # Assuming the fifth element in the tuple is the destination host
-                    heapq.heappush(backward_heap, (node, current_node))
+                    if ignore_dest_user:
+                        node = connection[4] # dest_host
+                    else:
+                        node = f"{connection[3]}@{connection[4]}" #dest_host@dest_user
+                    heapq.heappush(heap, (node, current_node))
 
-    return backward_connected_nodes
+    return connected_nodes
 
 def build_lookup_table(input_lines, ignore_dest_user):
     graph = defaultdict(set)
@@ -94,7 +97,7 @@ if __name__ == "__main__":
     if interesting_host in lookup_table:
         print(f"{interesting_host} is able to connect {mode} to:\n")
         if mode == "indirectly":
-            result = indirect_get_connected_nodes(lookup_table, interesting_host)
+            result = indirect_get_connected_nodes(lookup_table, interesting_host, ignore_dest_user)
             for dest in result:
                 print(dest)
         else:
