@@ -37,7 +37,7 @@ def build_lookup_table(input_lines, ignore_dest_user):
 
         prev_dest_host = None
 
-        if ": " in line or ">" not in line or not line[-1].isdigit():
+        if ": " in line or "]->" not in line or not line[-1].isdigit():
             continue
 
         pattern = re.compile(r"(\w+)@(\d+\.\d+\.\d+\.\d+)(\[[^\]]+\])->(?=(\w+)@(\d+\.\d+\.\d+\.\d+))")

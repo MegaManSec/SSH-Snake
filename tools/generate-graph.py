@@ -19,7 +19,7 @@ def build_lookup_table(input_lines, ignore_dest_user):
         line = line.strip()
         line = re.sub(r"^\[?\d+\]?\s*", "", line)
 
-        if ": " in line or ">" not in line or not line[-2].isdigit() or not line[-1] == ')':
+        if ": " in line or "]->" not in line or not line[-2].isdigit() or not line[-1] == ')':
             continue
 
         pattern = re.compile(r"(\w+)@\(([\d\.:]+)\)(\[[^\]]+\])->(?=(\w+)@\(([\d\.:]+)\))")
