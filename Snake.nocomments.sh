@@ -497,7 +497,7 @@ while IFS= read -r home_folder; do
 [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
 home_folder="$(readlink -m -- "$home_folder")"
 is_dir "$home_folder" && home_folders["$home_folder"]=1
-done < <(${s} find "/home/" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+done < <(${s} find -L "/home/" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
 while IFS=: read -r _ _ _ _ _ home_folder _; do
 [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
 home_folder="$(readlink -m -- "$home_folder")"
@@ -514,7 +514,7 @@ is_dir "$ssh_folder" || continue
 while IFS= read -r ssh_file; do
 is_file "$ssh_file" || continue
 ssh_files["$ssh_file"]=1
-done < <(${s} find "$ssh_folder" -type f -readable 2>/dev/null)
+done < <(${s} find -L "$ssh_folder" -type f -readable 2>/dev/null)
 done
 }
 check_file_for_privkey() {
@@ -591,7 +591,7 @@ find_ssh_keys_paths() {
 local ssh_file
 while IFS= read -r ssh_file; do
 check_and_populate_keys "$ssh_file"
-done < <(${s} find ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -readable -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null)
+done < <(${s} find -L ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -readable -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null)
 }
 check_potential_key_files() {
 local key_file
@@ -734,7 +734,7 @@ check_potential_key_files "$cline_val" "$home_folder"
 ;;
 esac
 done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" | sort -u)
-done < <(${s} find "$home_folder/.ssh" -type f -readable 2>/dev/null)
+done < <(${s} find -L "$home_folder/.ssh" -type f -readable 2>/dev/null)
 done
 }
 find_user_from_file() {

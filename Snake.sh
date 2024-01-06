@@ -863,7 +863,7 @@ find_home_folders() {
     [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
     home_folder="$(readlink -m -- "$home_folder")"
     is_dir "$home_folder" && home_folders["$home_folder"]=1
-  done < <(${s} find "/home/" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+  done < <(${s} find -L "/home/" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
 
   while IFS=: read -r _ _ _ _ _ home_folder _; do
     [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
@@ -886,7 +886,7 @@ init_ssh_files() {
     while IFS= read -r ssh_file; do
       is_file "$ssh_file" || continue
       ssh_files["$ssh_file"]=1
-    done < <(${s} find "$ssh_folder" -type f -readable 2>/dev/null)
+    done < <(${s} find -L "$ssh_folder" -type f -readable 2>/dev/null)
   done
 }
 
@@ -1013,7 +1013,7 @@ find_ssh_keys_paths() {
 
   while IFS= read -r ssh_file; do
     check_and_populate_keys "$ssh_file"
-  done < <(${s} find ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -readable -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null) # Longest key is ---- BEGIN SSH2 ENCRYPTED PRIVATE KEY ----. We lose "SSH PRIVATE KEY FILE FORMAT 1.1" but oh well.
+  done < <(${s} find -L ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -readable -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null) # Longest key is ---- BEGIN SSH2 ENCRYPTED PRIVATE KEY ----. We lose "SSH PRIVATE KEY FILE FORMAT 1.1" but oh well.
 }
 
 # Given a key file path and a home directory, determine whether the key exists and corresponds to a private key or not using the appropriate home directory location where necessary.
@@ -1266,7 +1266,7 @@ find_from_ssh_config() {
             ;;
         esac
       done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" | sort -u)
-    done < <(${s} find "$home_folder/.ssh" -type f -readable 2>/dev/null)
+    done < <(${s} find -L "$home_folder/.ssh" -type f -readable 2>/dev/null)
   done
 }
 
