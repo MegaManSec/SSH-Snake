@@ -16,6 +16,8 @@ It's completely self-replicating and self-propagating -- and completely fileless
 
 Instead of manually jumping between systems with SSH keys like it's a Super Mario game, let SSH-Snake do the work for you.
 
+Although this tool is intended for hacking purposes, sysadmins can also use it to better understand their infrastructure and network. If you want to disable the printing of private keys discovered, [comment out this line of code](https://github.com/MegaManSec/SSH-Snake/blob/7ae7ef0afe0e067a1b96f69e508df52831a08b8b/Snake.sh#L964).
+
 An in-depth look at how this script actually works, technical details, interesting discoveries, design decisions, benchmarking, and lessons learnt, check out [this blog post](https://joshua.hu/ssh-snake-ssh-network-traversal-discover-ssh-private-keys-network-graph).
 
 # Screenshots
@@ -122,7 +124,7 @@ ssh -i "/home/jrogers/.ssh/key" user@10.44.39.21 'sudo ssh -i "/root/.ssh/id_rsa
 
 # Snake.sh vs Snake.nocomments.sh
 
-Since the script is quite large, loading the script into a here-document (which it does automatically) [causes bash to write to a temporary file](https://joshua.hu/more-fun-with-bash-ssh-and-ssh-keygen-version-differences) (as it is greater than 65535-bytes).
+Since the script is quite large, loading the script into a here-document (which it does automatically because the script it actually [a Quine](https://en.wikipedia.org/wiki/Quine_(computing))) [causes bash to write to a temporary file](https://joshua.hu/more-fun-with-bash-ssh-and-ssh-keygen-version-differences) (as it is greater than 65535-bytes).
 
 To cut down on the size such that it remains 100% fileless, Snake.nocomments.sh has a version with all comments, unnecessary white-spaces, and blank lines removed. This cuts the file's size down such that the temporary file is not created by bash.
 
