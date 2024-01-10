@@ -61,13 +61,15 @@ curl https://raw.githubusercontent.com/MegaManSec/SSH-Snake/main/Snake.nocomment
 
 # About SSH-Snake
 
-SSH-Snake seamlessly emulates what a human adversary would do to discover SSH private keys and destinations where they can be used to connect to. Written entirely in Bash, it operates with a minimal set of dependencies commonly available on major Linux systems: `bash`, `ssh`, `getconf`, `coreutils`, `getent`, `awk`, `sort`, `grep`, `tr`, `find`, and `cat`. Likewise, `sudo`, `hostname`, `ip`, and `xargs` may also be used, but they are not required (and the script gracefully handles cases where they are not present). If a system is discovered without any of the required packages, it gracefully fails, alerting the user that the scan could not continue on that particular system (and backtracks, continuing from the previous system.)
+SSH-Snake seamlessly emulates what a human adversary would do to discover SSH private keys and destinations where they can be used to connect to. Written entirely in Bash, it operates with a minimal set of dependencies commonly available on major Linux (and MacOS) systems: `bash`, `ssh`, `coreutils`, `awk`, `sort`, `grep`, `tr`, `find`, and `cat`. `getent` OR `dscacheutil` is required. `sed` is required for only the very first system. Likewise, `sudo`, `hostname`, `ip`, `timeout`, `arp`, `ifconfig`, `ipconfig`, and `xargs` may also be used, but they are not required (and the script gracefully handles cases where they are not present). If a system is discovered without any of the required packages, it gracefully fails, alerting the user that the scan could not continue on that particular system (and backtracks, continuing from the previous system.)
 
 SSH-Snake is completely fileless: after the user runs the script, it is passed to destinations' bash via stdin and bash arguments (via SSH). No material evidence of the script exists on any of the systems scanned: the only evidence of the script running is in the process tree, and the substantial amount of invalid SSH attempts which will inevitably occur.
 
 SSH-Snake takes a [depth-first approach](https://en.wikipedia.org/wiki/Depth-first_search) to discovery: once it connects to one system, it tries to connect further from that system before backtracking.
 
 The name SSH-Snake comes from the fact that the output of the script looks like a snake slithering up and down the network. However unlike the game Snake, SSH-Snake will not die when it bites its own tail (connects to a systems it has already scanned or is currently scanning): it will simply print how it connected there as normal, but return and not re-scan the destination (in order to avoid infinite recursion).
+
+SSH-Snake has been tested on various flavors of Linux, and MacOS. If you encounter a Linux-based OS it isn't compatible with, please submit a report.
 
 # Features
 
@@ -145,3 +147,5 @@ I am particually interested in any interesting `[line]` outputs associated with 
 - `find ... -readable ...` is used in the script in multiple places. The `-readable` flag is not supported on all versions of `find(1)`.
 
 - The script does not currently look for SSH agent sockets.
+
+- The script does not properly resolve domains with multiple IPv4 addresses.

