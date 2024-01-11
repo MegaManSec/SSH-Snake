@@ -596,6 +596,7 @@ unresolved_key_file="$1"
 [[ -v 'priv_keys_files["$unresolved_key_file"]' || ${#priv_keys_files["$unresolved_key_file"]} -gt 0 ]] && return 0
 [[ -v 'key_files["$unresolved_key_file"]' || ${#key_files["$unresolved_key_file"]} -gt 0 ]] && return 1
 key_file="$(${s} readlink -f -- "$unresolved_key_file" 2>/dev/null)"
+[[ -z "$key_file" ]] && key_files["$unresolved_key_file"]=1 && return 1
 [[ -v 'priv_keys_files["$key_file"]' || ${#priv_keys_files["$key_file"]} -gt 0 ]] && priv_keys_files["$unresolved_key_file"]=1 && return 0
 [[ -v 'key_files["$key_file"]' || ${#key_files["$key_file"]} -gt 0 ]] && key_files["$unresolved_key_file"]=1 && return 1
 key_files["$unresolved_key_file"]=1

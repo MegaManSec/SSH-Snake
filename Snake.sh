@@ -1020,6 +1020,8 @@ check_and_populate_keys() {
 
   key_file="$(${s} readlink -f -- "$unresolved_key_file" 2>/dev/null)" # use sudo because it may be a symlink in a priviliged location, not that it would really matter (ssh will just use the symlink)
 
+  [[ -z "$key_file" ]] && key_files["$unresolved_key_file"]=1 && return 1
+
   [[ -v 'priv_keys_files["$key_file"]' || ${#priv_keys_files["$key_file"]} -gt 0 ]] && priv_keys_files["$unresolved_key_file"]=1 && return 0
   [[ -v 'key_files["$key_file"]' || ${#key_files["$key_file"]} -gt 0 ]] && key_files["$unresolved_key_file"]=1 && return 1
 
