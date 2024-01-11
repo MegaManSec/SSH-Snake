@@ -463,7 +463,7 @@ shape_script() {
   local_script="$(remove_functions "$THIS_SCRIPT" "$remove_function")"
 
   # Remove all comments and unnecessary white-spaces.
-  local_script="$(printf "%s" "$local_script" | sed -e 's/^[ \t]*//' -e 's/^#.*$//' -e 's/[[:space:]]#.*//' -e '/^[[:space:]]*$/d')"
+  local_script="$(printf "%s" "$local_script" | sed -e 's/^ *//' -e 's/^#.*$//' -e 's/[[:space:]]#.*//' -e '/^[[:space:]]*$/d')"
 
   # XXX: If we want to see what script we're running, then this is the place to print "$local_script". Or above the previous line.
   # printf "%s" "$local_script"
