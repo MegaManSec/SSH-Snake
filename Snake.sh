@@ -1785,6 +1785,8 @@ is_file() {
 
   filename="$1"
 
+  [[ -z "$filename" ]] && return 1
+
   [[ -v 'files["$filename"]' || ${#files["$filename"]} -gt 0 ]] && return 0
   [[ -v 'not_files["$filename"]' || ${#not_files["$filename"]} -gt 0 ]] && return 1
 
@@ -1799,6 +1801,8 @@ is_dir() {
   local dir_name
 
   dir_name="$1"
+
+  [[ -z "$dir_name" ]] && return 1
 
   [[ -v 'folders["$dir_name"]' || ${#folders["$dir_name"]} -gt 0 ]] && return 0
   [[ -v 'not_folders["$dir_name"]' || ${#not_folders["$dir_name"]} -gt 0 ]] && return 1
