@@ -329,7 +329,7 @@ remove_functions() {
     # [space][space][...] func_name
     function is_func_call() {
       for (i in funcs) {
-        if ($0 ~ "^ *" funcs[i]) {
+        if ($0 ~ "^[ ]*" funcs[i]) {
           return 1
         }
       }
@@ -463,7 +463,7 @@ shape_script() {
   local_script="$(remove_functions "$THIS_SCRIPT" "$remove_function")"
 
   # Remove all comments and unnecessary white-spaces.
-  local_script="$(printf "%s" "$local_script" | sed -e 's/^ *//' -e 's/^#.*$//' -e 's/ #.*//' -e '/^ *$/d')"
+  local_script="$(printf "%s" "$local_script" | sed -e 's/^[ ]*//' -e 's/^#.*$//' -e 's/[ ]#.*//' -e '/^[ ]*$/d')"
 
   # XXX: If we want to see what script we're running, then this is the place to print "$local_script". Or above the previous line.
   # printf "%s" "$local_script"
@@ -1125,7 +1125,7 @@ find_from_bash_history() {
       # scp file user@host:~/ ; extract user@host
       # scp user@host:~/file ./ ; extract user@host
       # rsync -a * user@host:~/ ; extract user@host
-      if ssh_dest="$(echo "$bash_history_line" | grep -m 1 -oE "$allowed_users_chars"'@[^ :]+')"; then #TODO: doesn't work when matches multiple (-3).
+      if ssh_dest="$(echo "$bash_history_line" | grep -m 1 -oE "$allowed_users_chars"'@[^ :]+')"; then # TODO: doesn't work when matches multiple (-3).
         local ssh_host
         local ssh_user
 
@@ -2097,7 +2097,7 @@ recursive_scan() {
         # Gitlab instances may be accessed, and it's quite easy to detect it. Since git uses ssh, we can record this.
         #
         # Disallowed command
-        if [[ "$line" == "Disallowed command" ]]; then #Gitlab
+        if [[ "$line" == "Disallowed command" ]]; then # Gitlab
           double_rs_chained_print "$t_hosts_chain" "$t_hostnames_chain" "$ssh_dest"
           rs_chained_print "$t_hosts_chain" "$ssh_dest [GitLab]"
           break
@@ -2106,7 +2106,7 @@ recursive_scan() {
         # Github, too.
         #
         # Invalid command: cmd
-        if [[ "$line" == "Invalid command: "* || "$line" == "exec request failed on channel "* ]]; then #Github
+        if [[ "$line" == "Invalid command: "* || "$line" == "exec request failed on channel "* ]]; then # Github
           double_rs_chained_print "$t_hosts_chain" "$t_hostnames_chain" "$ssh_dest"
           rs_chained_print "$t_hosts_chain" "$ssh_dest [GitHub]"
           break
