@@ -994,7 +994,7 @@ local ssh_dest
 declare -A valid_ssh_dests
 declare -A resolved_hosts
 local res
-local mac
+local use_mac
 local to
 if command -v timeout >/dev/null 2>&1; then
 to="timeout 5"
@@ -1003,7 +1003,7 @@ if getent ahostsv4 -- 1.1.1.1 >/dev/null 2>&1; then
 res="$to getent ahostsv4 --"
 elif dscacheutil -q host -a name 1.1.1.1 >/dev/null 2>&1; then
 res="$to dscacheutil -q host -a name"
-mac="1"
+use_mac="1"
 else
 printf "INTERNAL_MSG: command not found: RESOLVE (%s)\n" "$(uname -a 2>/dev/null)"
 fin
@@ -1027,26 +1027,31 @@ is_ssh_dest "$ssh_dest" || continue
 ssh_user="${ssh_dest%%@*}"
 ssh_host="${ssh_dest#*@}"
 if [[ -v 'resolved_hosts["$ssh_host"]' || ${#resolved_hosts["$ssh_host"]} -gt 0 ]]; then
-resolved_ssh_host="${resolved_hosts["$ssh_host"]}"
+:
 else
-if [[ -n "$mac" ]]; then
-resolved_ssh_host="$($res "$ssh_host" 2>/dev/null | grep -F 'ip_address:')"
-resolved_ssh_host="${resolved_ssh_host#* }"
+local resolved_ssh_hosts
+if [[ -n "$use_mac" ]]; then
+resolved_ssh_hosts="$($res "$ssh_host" 2>/dev/null | awk '/ip_address:/{print $NF}')"
 else
-resolved_ssh_host="$($res "$ssh_host" 2>/dev/null)"
-resolved_ssh_host="${resolved_ssh_host%% *}"
+resolved_ssh_hosts="$($res "$ssh_host" 2>/dev/null | awk '/RAW/{print $1}')"
 fi
+for resolved_ssh_host in "${resolved_ssh_hosts[@]}"; do
 if [[ "${resolved_ssh_host:0:1}" =~ [12] ]]; then
 [[ "$resolved_ssh_host" =~ ^127\. ]] && resolved_ssh_host="127.0.0.1"
-resolved_hosts["$ssh_host"]="$resolved_ssh_host"
+[[ -v '_ignored_hosts["$resolved_ssh_host"]' || ${#_ignored_hosts["$resolved_ssh_host"]} -gt 0 ]] && continue
+resolved_hosts["$ssh_host"]+="$resolved_ssh_host "
 else
-_ignored_hosts["$ssh_host"]=1
 [[ -n "$resolved_ssh_host" ]] && _ignored_hosts["$resolved_ssh_host"]=1
+fi
+done
+fi
+if [[ "${#resolved_hosts["$ssh_host"]}" -lt 7 ]]; then
+_ignored_hosts["$ssh_host"]=1
 continue
 fi
-fi
-[[ -v '_ignored_hosts["$resolved_ssh_host"]' || ${#_ignored_hosts["$resolved_ssh_host"]} -gt 0 ]] && _ignored_hosts["$ssh_host"]=1
+for resolved_ssh_host in ${resolved_hosts["$ssh_host"]}; do
 valid_ssh_dests["$ssh_user@$resolved_ssh_host"]=1
+done
 done
 ssh_dests=()
 for ssh_dest in "${!valid_ssh_dests[@]}"; do
@@ -1088,6 +1093,9 @@ ssh_host="$1"
 [[ -v 'ssh_hosts["$ssh_host"]' || ${#ssh_hosts["$ssh_host"]} -gt 0 ]] && return 0
 [[ "$ssh_host" =~ ^$allowed_host_chars+$ ]] || return 1
 [[ "${ssh_host:0:1}" == "-" || "${ssh_host:0-1}" == "-" || "${ssh_host:0:1}" == "." || "${ssh_host:0-1}" == "." || "$ssh_host" == *"-."* || "$ssh_host" == *"--"* ]] && return 1
+if [[ "$ssh_host" =~ ^[0-9.]+$ ]]; then
+[[ "$ssh_host" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
+fi
 return 0
 }
 is_ssh_dest() {
@@ -1096,6 +1104,7 @@ local ssh_host
 local ssh_dest
 ssh_dest="$1"
 [[ -z "$ssh_dest" ]] && return 1
+ssh_dest="${ssh_dest,,}"
 [[ -v '_ignored_dests["$ssh_dest"]' || ${#_ignored_dests["$ssh_dest"]} -gt 0 ]] && return 1
 ssh_user="${ssh_dest%%@*}"
 ssh_host="${ssh_dest#*@}"
@@ -1119,6 +1128,7 @@ local ssh_dest
 local ssh_host
 local ssh_user
 ssh_dest="$1"
+ssh_dest="${ssh_dest,,}"
 ssh_user="${ssh_dest%%@*}"
 ssh_host="${ssh_dest#*@}"
 is_ssh_dest "$ssh_dest" && ssh_dests["$ssh_dest"]=1 && ssh_hosts["$ssh_host"]=1 && ssh_users["$ssh_user"]=1 && return 0

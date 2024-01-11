@@ -1672,13 +1672,12 @@ combinate_interesting_users_hosts() {
 }
 
 # Deduplicate ssh_dests by resolving the hosts for each ssh_dest, checking whether the user, host, or resolved dest is ignored, then adding the destinations back to the original ssh_dests array.
-# TODO: doesn't support hosts with multiple hosts (4 ips for 1 domain), and in fact may even break that.
 deduplicate_resolved_hosts_keys() {
   local ssh_dest
   declare -A valid_ssh_dests
   declare -A resolved_hosts
   local res
-  local mac
+  local use_mac
   local to
 
   # DNS timeout of 5 seconds per address (bleh, hack).
@@ -1692,7 +1691,7 @@ deduplicate_resolved_hosts_keys() {
   # Otherwise dscacheutils for mac.
   elif dscacheutil -q host -a name 1.1.1.1 >/dev/null 2>&1; then
     res="$to dscacheutil -q host -a name"
-    mac="1"
+    use_mac="1"
   else
     # If we can't use getent or dscacheutil, we're on an unknown type of system (with bash?!)
     # Use printf instead of chained_print() to be consistent.
@@ -1724,44 +1723,51 @@ deduplicate_resolved_hosts_keys() {
     # Make everything lower case.
     ssh_dest="${ssh_dest,,}"
 
-    is_ssh_dest "$ssh_dest" || continue
+    is_ssh_dest "$ssh_dest" || continue # Checks if the host has been ignored in this loop
 
     ssh_user="${ssh_dest%%@*}"
     ssh_host="${ssh_dest#*@}"
 
     # Check if the host has already been resolved. If it has, use the internally cached answer.
     if [[ -v 'resolved_hosts["$ssh_host"]' || ${#resolved_hosts["$ssh_host"]} -gt 0 ]]; then
-      resolved_ssh_host="${resolved_hosts["$ssh_host"]}"
+      :
     else
       # If the host has not already been resolved, resolve it.
+      # If resolution of ${resolved_hosts["$ssh_host"]} failed before, we won't hit this code path because the host will be added to _ignored_hosts (and will be skipped using is_ssh_dest().
       # macos
-      if [[ -n "$mac" ]]; then
-        resolved_ssh_host="$($res "$ssh_host" 2>/dev/null | grep -F 'ip_address:')"
-        resolved_ssh_host="${resolved_ssh_host#* }" # format is 'ip_address: ip'
+      local resolved_ssh_hosts # list of ipv4 addresses for a host
+      if [[ -n "$use_mac" ]]; then
+        resolved_ssh_hosts="$($res "$ssh_host" 2>/dev/null | awk '/ip_address:/{print $NF}')"
       else
-        resolved_ssh_host="$($res "$ssh_host" 2>/dev/null)"
-        resolved_ssh_host="${resolved_ssh_host%% *}" # format is 'ip\t[junk]
+      # linux
+        resolved_ssh_hosts="$($res "$ssh_host" 2>/dev/null | awk '/RAW/{print $1}')"
       fi
 
-      # Answer must begin with 1 or 2 ($res 0.1.2.3 will respond with 0.1.2.3).
-      if [[ "${resolved_ssh_host:0:1}" =~ [12] ]]; then
-        [[ "$resolved_ssh_host" =~ ^127\. ]] && resolved_ssh_host="127.0.0.1" # If it's loopback, always use 127.0.0.1
-        # Cache the host
-        resolved_hosts["$ssh_host"]="$resolved_ssh_host"
-      else
-        # Ignore this host
-        _ignored_hosts["$ssh_host"]=1
-        # Also ignore the resolved host (which may not necessarily be the same as the host).
-        [[ -n "$resolved_ssh_host" ]] && _ignored_hosts["$resolved_ssh_host"]=1
-        continue
-      fi
+      for resolved_ssh_host in "${resolved_ssh_hosts[@]}"; do
+        # Answer must begin with 1 or 2 ($res 0.1.2.3 will respond with 0.1.2.3).
+        if [[ "${resolved_ssh_host:0:1}" =~ [12] ]]; then
+          [[ "$resolved_ssh_host" =~ ^127\. ]] && resolved_ssh_host="127.0.0.1" # If it's loopback, always use 127.0.0.1
+          [[ -v '_ignored_hosts["$resolved_ssh_host"]' || ${#_ignored_hosts["$resolved_ssh_host"]} -gt 0 ]] && continue
+          # Cache the host
+          resolved_hosts["$ssh_host"]+="$resolved_ssh_host "
+        else
+          # Ignore this RESOLVED host (might save us a few cycles).
+          # Don't add the ssh_host to _ignored_hosts become it may have non-ignored hosts, too.
+          [[ -n "$resolved_ssh_host" ]] && _ignored_hosts["$resolved_ssh_host"]=1
+        fi
+      done
     fi
 
-    # Check whether the resolved host is ignored. If so, also add the unresolved host to _ignored_hosts.
-    [[ -v '_ignored_hosts["$resolved_ssh_host"]' || ${#_ignored_hosts["$resolved_ssh_host"]} -gt 0 ]] && _ignored_hosts["$ssh_host"]=1
-    # add_ssh_dest will check whether the $ssh_user@$resolved_ssh_host is ignored.
+    # No IPs resolved for the host, add the host to _ignored_host.
+    if [[ "${#resolved_hosts["$ssh_host"]}" -lt 7 ]]; then
+      _ignored_hosts["$ssh_host"]=1
+      continue
+    fi
 
-    valid_ssh_dests["$ssh_user@$resolved_ssh_host"]=1
+    # Loop through each host (which are space-separated now), so no quotation marks.
+    for resolved_ssh_host in ${resolved_hosts["$ssh_host"]}; do
+      valid_ssh_dests["$ssh_user@$resolved_ssh_host"]=1
+    done
   done
 
   ssh_dests=()
@@ -1834,6 +1840,10 @@ is_ssh_host() {
 
   [[ "${ssh_host:0:1}" == "-" || "${ssh_host:0-1}" == "-" || "${ssh_host:0:1}" == "." || "${ssh_host:0-1}" == "." || "$ssh_host" == *"-."* || "$ssh_host" == *"--"* ]] && return 1
 
+  if [[ "$ssh_host" =~ ^[0-9.]+$ ]]; then
+    [[ "$ssh_host" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
+  fi
+
   return 0
 }
 
@@ -1846,6 +1856,8 @@ is_ssh_dest() {
   ssh_dest="$1"
 
   [[ -z "$ssh_dest" ]] && return 1
+
+  ssh_dest="${ssh_dest,,}"
 
   # XXX: The below line is intrinsically flawed because even if $ssh_dest is already in ssh_dests, this does not mean $ssh_host has not been added to $_ignored_hosts. We keep it here to remember not to add it again.
   # [[ -v 'ssh_dests["$ssh_dest"]' || ${#ssh_dests["$ssh_dest"]} -gt 0 ]] && return 0
@@ -1888,6 +1900,7 @@ add_ssh_dest() {
   local ssh_user
 
   ssh_dest="$1"
+  ssh_dest="${ssh_dest,,}"
   ssh_user="${ssh_dest%%@*}"
   ssh_host="${ssh_dest#*@}"
 

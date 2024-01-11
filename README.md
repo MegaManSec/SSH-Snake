@@ -147,5 +147,3 @@ I am particually interested in any interesting `[line]` outputs associated with 
 - `find ... -readable ...` is used in the script in multiple places. The `-readable` flag is not supported on all versions of `find(1)`.
 
 - The script does not currently look for SSH agent sockets.
-
-- The script does not properly resolve domains with multiple IPv4 addresses.
