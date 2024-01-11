@@ -662,10 +662,10 @@ check_ssh_options() {
 
   ssh_extra_options=(-oHostkeyAlgorithms=+ssh-rsa -oKexAlgorithms=+diffie-hellman-group1-sha1)
   for ssh_extra_option in "${ssh_extra_options[@]}"; do
-    [[ $(ssh "$ssh_extra_option" 2>&1) =~ Bad\ protocol\ 2\ host\ key\ algorithms|Bad\ SSH2\ KexAlgorithms|Bad\ key\ types ]] || ssh_options+=("$ssh_extra_option")
+    [[ "$(ssh "$ssh_extra_option" 2>&1)" =~ Bad\ protocol\ 2\ host\ key\ algorithms|Bad\ SSH2\ KexAlgorithms|Bad\ key\ types|diffie-hellman-group1-sha1|ssh-rsa ]] || ssh_options+=("$ssh_extra_option")
   done
   ssh_extra_options="-oPubkeyAcceptedKeyTypes=+ssh-rsa"
-  [[ $(ssh "$ssh_extra_option" 2>&1) =~ Bad\ configuration\ option|pubkeyacceptedkeytypes ]] || ssh_options+=("$ssh_extra_option")
+  [[ "$(ssh "$ssh_extra_option" 2>&1)" =~ Bad\ configuration\ option|pubkeyacceptedkeytypes ]] || ssh_options+=("$ssh_extra_option")
 }
 
 # Determining the ip address of the current destination is difficult because it may have multiple ip addresses, and we are likely to connect to both of them eventually (including 127.0.0.1 for example).
