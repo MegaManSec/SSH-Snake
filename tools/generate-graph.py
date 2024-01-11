@@ -11,7 +11,7 @@ def create_graph_from_edges(lookup_table):
     return graph
 
 
-def build_lookup_table(input_lines, ignore_dest_user):
+def build_lookup_table(input_lines, ignore_dest_user, dot):
     lookup_table = set()
 
 
@@ -28,6 +28,13 @@ def build_lookup_table(input_lines, ignore_dest_user):
 
         for match in matches:
             user, host, _, dest_user, dest_host = match.groups()
+
+            if dot:
+                user = f'"{user}'
+                host = f'{host}"'
+                dest_user = f'"{dest_user}'
+                dest_host = f'{dest_host}"'
+
             if host == "(127.0.0.1)" or host == "127.0.0.1":
                 if prev_dest_host is not None:
                     host = prev_dest_host
@@ -71,7 +78,7 @@ if __name__ == "__main__":
     if args.with_users:
         ignore_dest_user = False
 
-    lookup_table = build_lookup_table(input_lines, ignore_dest_user)
+    lookup_table = build_lookup_table(input_lines, ignore_dest_user, args.format == "dot")
     graph = create_graph_from_edges(lookup_table)
 
     if len(lookup_table) > 500 and args.format == "dot":
