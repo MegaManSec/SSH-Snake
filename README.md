@@ -61,7 +61,7 @@ curl https://raw.githubusercontent.com/MegaManSec/SSH-Snake/main/Snake.nocomment
 
 # About SSH-Snake
 
-SSH-Snake seamlessly emulates what a human adversary would do to discover SSH private keys and destinations where they can be used to connect to. Written entirely in Bash, it operates with a minimal set of dependencies commonly available on major Linux (and MacOS) systems: `bash`, `ssh`, `coreutils`, `awk`, `sort`, `grep`, `tr`, `find`, and `cat`. `getent` OR `dscacheutil` is required. `sed` is required for only the very first system. Likewise, `sudo`, `hostname`, `ip`, `timeout`, `arp`, `ifconfig`, `ipconfig`, and `xargs` may also be used, but they are not required (and the script gracefully handles cases where they are not present). If a system is discovered without any of the required packages, it gracefully fails, alerting the user that the scan could not continue on that particular system (and backtracks, continuing from the previous system.)
+SSH-Snake seamlessly emulates what a human adversary would do to discover SSH private keys and destinations where they can be used to connect to. Written entirely in Bash, it operates with a minimal set of dependencies commonly available on major Linux (and MacOS) systems: `bash`, `ssh`, `coreutils`, `awk`, `uniq`, `sort`, `grep`, `tr`, `find`, and `cat`. `getent` OR `dscacheutil` is required. `sed` is required for only the very first system. Likewise, `sudo`, `hostname`, `ip`, `timeout`, `arp`, `ifconfig`, `ipconfig`, and `xargs` may also be used, but they are not required (and the script gracefully handles cases where they are not present). If a system is discovered without any of the required packages, it gracefully fails, alerting the user that the scan could not continue on that particular system (and backtracks, continuing from the previous system.)
 
 SSH-Snake is completely fileless: after the user runs the script, it is passed to destinations' bash via stdin and bash arguments (via SSH). No material evidence of the script exists on any of the systems scanned: the only evidence of the script running is in the process tree, and the substantial amount of invalid SSH attempts which will inevitably occur.
 
@@ -143,7 +143,5 @@ I am particually interested in any interesting `[line]` outputs associated with 
 - Port 22 Only: There is a general assumption that SSH is running on port 22.
 
 - GNU coreutils: The script relies heavily on GNU coreutils. I have not determined how much (if any) GNU-ism is used in the script.
-
-- `find ... -readable ...` is used in the script in multiple places. The `-readable` flag is not supported on all versions of `find(1)`.
 
 - The script does not currently look for SSH agent sockets.

