@@ -2047,9 +2047,10 @@ recursive_scan() {
         #
         # Warning: Identity file [file] not accessible: No such file or directory.
         # Warning: Identity file [file] not accessible: Permission denied.
+        # no such identity: [file]: No such file or directory
         # Load key [file]: invalid format
         # Load key [file]: bad permissions
-        if [[ "$line" == "Warning: Identity file"* || "$line" == "Load key"* ]]; then
+        if [[ "$line" == "Warning: Identity file"* || "$line" == "Load key"* || "$line" == *"No such file or directory"* ]]; then
           _ignored_key_files["$key_file"]=1
           break
         fi

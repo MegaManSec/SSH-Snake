@@ -69,7 +69,7 @@ SSH-Snake takes a [depth-first approach](https://en.wikipedia.org/wiki/Depth-fir
 
 The name SSH-Snake comes from the fact that the output of the script looks like a snake slithering up and down the network. However unlike the game Snake, SSH-Snake will not die when it bites its own tail (connects to a systems it has already scanned or is currently scanning): it will simply print how it connected there as normal, but return and not re-scan the destination (in order to avoid infinite recursion).
 
-SSH-Snake has been tested on various flavors of Linux, and MacOS. If you encounter a Linux-based OS it isn't compatible with, please submit a report.
+SSH-Snake has been tested on various flavors of Linux, and MacOS (with Homebrew Bash installed). If you encounter a Linux-based OS it isn't compatible with, please submit a report.
 
 # Features
 
