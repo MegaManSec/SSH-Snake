@@ -521,12 +521,12 @@ find_home_folders() {
 local home_folder
 while IFS= read -r home_folder; do
 [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
-home_folder="$(readlink -m -- "$home_folder" 2>/dev/null)"
+home_folder="$(readlink -f -- "$home_folder" 2>/dev/null)"
 is_dir "$home_folder" && home_folders["$home_folder"]=1
 done < <(${s} find -L "/home" "/Users" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
 while IFS=: read -r _ _ _ _ _ home_folder _; do
 [[ -v 'home_folders["$home_folder"]' || ${#home_folders["$home_folder"]} -gt 0 ]] && continue
-home_folder="$(readlink -m -- "$home_folder" 2>/dev/null)"
+home_folder="$(readlink -f -- "$home_folder" 2>/dev/null)"
 is_dir "$home_folder" && home_folders["$home_folder"]=1
 done < <(getent passwd 2>/dev/null)
 }
@@ -594,7 +594,7 @@ local ignored_key_file
 unresolved_key_file="$1"
 [[ -v 'priv_keys_files["$unresolved_key_file"]' || ${#priv_keys_files["$unresolved_key_file"]} -gt 0 ]] && return 0
 [[ -v 'key_files["$unresolved_key_file"]' || ${#key_files["$unresolved_key_file"]} -gt 0 ]] && return 1
-key_file="$(${s} readlink -m -- "$unresolved_key_file" 2>/dev/null)"
+key_file="$(${s} readlink -f -- "$unresolved_key_file" 2>/dev/null)"
 [[ -v 'priv_keys_files["$key_file"]' || ${#priv_keys_files["$key_file"]} -gt 0 ]] && priv_keys_files["$unresolved_key_file"]=1 && return 0
 [[ -v 'key_files["$key_file"]' || ${#key_files["$key_file"]} -gt 0 ]] && key_files["$unresolved_key_file"]=1 && return 1
 key_files["$unresolved_key_file"]=1
