@@ -144,7 +144,7 @@ return 0
  }
 function is_func_call() {
 for (i in funcs) {
-if ($0 ~ "^[[:space:]]*" funcs[i]) {
+if ($0 ~ "^ *" funcs[i]) {
 return 1
  }
  }
@@ -246,7 +246,7 @@ remove_function+="print_snake "
 remove_function+="gen_retried_interesting_dests "
 remove_function+="root_ssh_keys root_ssh_hostnames_dests root_ssh_hosts_dests"
 local_script="$(remove_functions "$THIS_SCRIPT" "$remove_function")"
-local_script="$(printf "%s" "$local_script" | sed -e 's/^ *//' -e 's/^#.*$//' -e 's/[[:space:]]#.*//' -e '/^[[:space:]]*$/d')"
+local_script="$(printf "%s" "$local_script" | sed -e 's/^ *//' -e 's/^#.*$//' -e 's/
 while IFS= read -r line; do
 if [[ "$line" == *"EXTERNAL_MSG: KEY"* ]]; then
 root_ssh_keys["${line##* }"]=1
