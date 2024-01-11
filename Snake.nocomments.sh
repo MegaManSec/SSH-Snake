@@ -259,14 +259,15 @@ printf "[%s]" "$(date +%s)"
 printf "%s\n" "$line"
 done < <(echo 'printf "%s" "$1" | base64 -d | stdbuf -o0 bash --noprofile --norc -s $1' | stdbuf -o0 bash --noprofile --norc -s "$(printf "%s" "$local_script" | base64 | tr -d '\n')" 2>&1 | grep -v -F 'INTERNAL_MSG')
 [[ $use_retry_all_dests -eq 1 ]] || return
-printf "\n\n---------------------------------------\n\n"
-printf "use_retry_all_dests=1. Re-starting.\n"
 local retried_interesting_dests
 retried_interesting_dests="$(gen_retried_interesting_dests | sort -u)"
+[[ "${#retried_interesting_dests}" -gt 0 ]] || return
+printf "\n\n---------------------------------------\n\n"
+printf "use_retry_all_dests=1. Re-starting.\n"
 printf "%s destinations (from %s unique servers) added to interesting_dests.\n" "$(echo "$retried_interesting_dests" | wc -l)" "${#root_ssh_hostnames_dests[@]}"
 retried_interesting_dests="$(echo "$retried_interesting_dests" | tr '\n' ' ')"
 printf "\n---------------------------------------\n\n\n"
-local_script="$(printf "%s" "$local_script" | sed '/^interesting_dests=(/c\interesting_dests=('"$retried_interesting_dests"')')"
+local_script="$(printf "%s" "$local_script" | sed 's/^interesting_dests=(/interesting_dests=('"$retried_interesting_dests"'/')"
 local_script="$(printf "%s" "$local_script" | sed 's/^use_retry_all_dests=1/use_retry_all_dests=2/')"
 remove_function="find_from_authorized_keys find_from_hosts find_from_last find_arp_neighbours find_d_block find_from_ignore_list find_from_known_hosts find_from_hashed_known_hosts find_from_prev_dest combinate_users_hosts_aggressive combinate_interesting_users_hosts interesting_users interesting_hosts deduplicate_resolved_hosts_keys init_ignored ignored_users ignored_hosts ignored_dests find_user_from_file "
 local_script="$(remove_functions "$local_script" "$remove_function")"
@@ -997,7 +998,7 @@ local res
 local use_mac
 local to
 if command -v timeout >/dev/null 2>&1; then
-to="timeout 5"
+to="timeout $ssh_timeout"
 fi
 if getent ahostsv4 -- 1.1.1.1 >/dev/null 2>&1; then
 res="$to getent ahostsv4 --"
@@ -1022,7 +1023,6 @@ for ssh_dest in "${!ssh_dests[@]}"; do
 local ssh_user
 local ssh_host
 local resolved_ssh_host
-ssh_dest="${ssh_dest,,}"
 is_ssh_dest "$ssh_dest" || continue
 ssh_user="${ssh_dest%%@*}"
 ssh_host="${ssh_dest#*@}"

@@ -25,7 +25,7 @@ ignore_user=0 # [0|1]: Consider a dest already scanned based only on the ip addr
 
 use_sudo=1 # [1|0]: Attempt to use sudo on the dest. This may generate a large amount of security-related logs and can be extremely noisy.
 
-ssh_timeout=3 # [3|n]: The connection timeout for ssh. See ssh_config(5)'s ConnectTimeout.
+ssh_timeout=3 # [3|n]: The connection timeout for ssh and DNS resolution. See ssh_config(5)'s ConnectTimeout.
 
 retry_count=3 # [3|n]: In some cases, a recoverable error in ssh may be encountered (such as trying to access an an AWS instance with a disabled username). This number corresponds to the maximum amount of times the destination is tried again. It's generally advised to set this to at least 1.
 
@@ -482,18 +482,21 @@ shape_script() {
 
   [[ $use_retry_all_dests -eq 1 ]] || return
 
+  local retried_interesting_dests
+  retried_interesting_dests="$(gen_retried_interesting_dests | sort -u)"
+
+  [[ "${#retried_interesting_dests}" -gt 0 ]] || return
+
   printf "\n\n---------------------------------------\n\n"
   printf "use_retry_all_dests=1. Re-starting.\n"
 
-  local retried_interesting_dests
-  retried_interesting_dests="$(gen_retried_interesting_dests | sort -u)"
 
   printf "%s destinations (from %s unique servers) added to interesting_dests.\n" "$(echo "$retried_interesting_dests" | wc -l)" "${#root_ssh_hostnames_dests[@]}"
   retried_interesting_dests="$(echo "$retried_interesting_dests" | tr '\n' ' ')"
 
   printf "\n---------------------------------------\n\n\n"
 
-  local_script="$(printf "%s" "$local_script" | sed '/^interesting_dests=(/c\interesting_dests=('"$retried_interesting_dests"')')"
+  local_script="$(printf "%s" "$local_script" | sed 's/^interesting_dests=(/interesting_dests=('"$retried_interesting_dests"'/')"
   local_script="$(printf "%s" "$local_script" | sed 's/^use_retry_all_dests=1/use_retry_all_dests=2/')"
 
   # We do not want to find any new dests and so on, so remove all of the non-key functions.
@@ -1682,7 +1685,7 @@ deduplicate_resolved_hosts_keys() {
 
   # DNS timeout of 5 seconds per address (bleh, hack).
   if command -v timeout >/dev/null 2>&1; then
-    to="timeout 5"
+    to="timeout $ssh_timeout"
   fi
 
   # Use getent if it's available.
@@ -1719,9 +1722,6 @@ deduplicate_resolved_hosts_keys() {
     local ssh_user
     local ssh_host
     local resolved_ssh_host
-
-    # Make everything lower case.
-    ssh_dest="${ssh_dest,,}"
 
     is_ssh_dest "$ssh_dest" || continue # Checks if the host has been ignored in this loop
 
@@ -1900,7 +1900,9 @@ add_ssh_dest() {
   local ssh_user
 
   ssh_dest="$1"
+
   ssh_dest="${ssh_dest,,}"
+
   ssh_user="${ssh_dest%%@*}"
   ssh_host="${ssh_dest#*@}"
 
