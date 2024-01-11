@@ -50,13 +50,13 @@ SSH-Snake can either be downloaded or piped into bash:
 
 ```bash
 wget https://raw.githubusercontent.com/MegaManSec/SSH-Snake/main/Snake.nocomments.sh
-stdbuf -o0 bash ./Snake.nocomments.sh
+bash ./Snake.nocomments.sh
 ```
 
 or
 
 ```bash
-curl https://raw.githubusercontent.com/MegaManSec/SSH-Snake/main/Snake.nocomments.sh | stdbuf -o0 bash
+curl https://raw.githubusercontent.com/MegaManSec/SSH-Snake/main/Snake.nocomments.sh | bash
 ```
 
 # About SSH-Snake

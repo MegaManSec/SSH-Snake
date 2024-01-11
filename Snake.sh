@@ -478,7 +478,7 @@ shape_script() {
     fi
     printf "[%s]" "$(date +%s)"
     printf "%s\n" "$line"
-  done < <(echo 'printf "%s" "$1" | base64 -d | stdbuf -o0 bash --noprofile --norc -s $1' | stdbuf -o0 bash --noprofile --norc -s "$(printf "%s" "$local_script" | base64 | tr -d '\n')" 2>&1 | grep -v -F 'INTERNAL_MSG')
+  done < <(echo 'printf "%s" "$1" | base64 -d | bash --noprofile --norc -s $1' | bash --noprofile --norc -s "$(printf "%s" "$local_script" | base64 | tr -d '\n')" 2>&1 | grep -v -F 'INTERNAL_MSG')
 
   [[ $use_retry_all_dests -eq 1 ]] || return
 
@@ -514,7 +514,7 @@ shape_script() {
     fi
     printf "[%s]" "$(date +%s)"
     printf "%s\n" "$line"
-  done < <(echo 'printf "%s" "$1" | base64 -d | stdbuf -o0 bash --noprofile --norc -s $1' | stdbuf -o0 bash --noprofile --norc -s "$(printf "%s" "$local_script" | base64 | tr -d '\n')" 2>&1 | grep -v -F 'INTERNAL_MSG')
+  done < <(echo 'printf "%s" "$1" | base64 -d | bash --noprofile --norc -s $1' | bash --noprofile --norc -s "$(printf "%s" "$local_script" | base64 | tr -d '\n')" 2>&1 | grep -v -F 'INTERNAL_MSG')
 }
 
 # If this is the first IP in the chain, prepare some data from the chain, which will be printed by the root script.
@@ -581,7 +581,7 @@ check_commands() {
   local required_commands
   local required_command
 
-  required_commands=("ssh-keygen" "readlink" "ssh" "basename" "base64" "awk" "sort" "uniq" "grep" "tr" "find" "cat" "stdbuf") # "sudo" "hostname" "xargs" "getent" "ifconfig" "ipconfig" "ip" "timeout" "dscacheutil" are all semi-optional. "sed" is necessary only by the first system.
+  required_commands=("ssh-keygen" "readlink" "ssh" "basename" "base64" "awk" "sort" "uniq" "grep" "tr" "find" "cat") # "sudo" "hostname" "xargs" "getent" "ifconfig" "ipconfig" "ip" "timeout" "dscacheutil" are all semi-optional. "sed" is necessary only by the first system.
 
   for required_command in "${required_commands[@]}"; do
     if ! command -v "$required_command" >/dev/null 2>&1; then
@@ -626,7 +626,7 @@ check_startup() {
   fi
 
   if ! printf "%s" "$script" | base64 -d >/dev/null 2>&1; then
-    printf "Usage: stdbuf -o0 bash %s >output.log\n" "$0"
+    printf "Usage: bash %s >output.log\n" "$0"
     exit 1
   fi
 }
@@ -1690,9 +1690,7 @@ deduplicate_resolved_hosts_keys() {
   local to
 
   # DNS timeout of 5 seconds per address (bleh, hack).
-  if command -v timeout >/dev/null 2>&1; then
-    to="timeout $ssh_timeout"
-  fi
+  command -v timeout >/dev/null 2>&1 && to="timeout $ssh_timeout"
 
   # Use getent if it's available.
   if getent ahostsv4 -- 1.1.1.1 >/dev/null 2>&1; then
@@ -2193,7 +2191,7 @@ recursive_scan() {
           # If the line doesn't contain the chain, then it's an unexpected output. So, print the chain including the destination, and the line.
           rs_chained_print "$t_hosts_chain" "$ssh_dest [line]: $line" # Doesn't include a chain, so the message is coming from something we didn't expect, so print it with [line].
         fi
-      done < <(stdbuf -o0 ${s} ssh "${ssh_options[@]}" -i "$key_file" -- "$ssh_dest" "echo 'printf \"%s\" \$1 | base64 -d | stdbuf -o0 bash --noprofile --norc -s \$1 \$2 \$3 \$4 \$5' | stdbuf -o0 bash --noprofile --norc -s -- '$script' '$(printf "%s" "$t_hosts_chain" | base64 | tr -d '\n')' '$ignore_list' '$ssh_dest' '$(printf "%s" "$t_hostnames_chain" | base64 | tr -d '\n')'" </dev/null 2>&1 | tr -d '\r')
+      done < <(${s} ssh "${ssh_options[@]}" -i "$key_file" -- "$ssh_dest" "echo 'printf \"%s\" \$1 | base64 -d | bash --noprofile --norc -s \$1 \$2 \$3 \$4 \$5' | bash --noprofile --norc -s -- '$script' '$(printf "%s" "$t_hosts_chain" | base64 | tr -d '\n')' '$ignore_list' '$ssh_dest' '$(printf "%s" "$t_hostnames_chain" | base64 | tr -d '\n')'" </dev/null 2>&1 | tr -d '\r')
       [[ $skip_this_dest -eq 1 ]] && break
 
     done
@@ -2267,4 +2265,4 @@ recursive_scan
 fin
 MAIN_SCRIPT
 )
-printf "%s" "$THIS_SCRIPT" | stdbuf -o0 bash --noprofile --norc
+printf "%s" "$THIS_SCRIPT" | bash --noprofile --norc
