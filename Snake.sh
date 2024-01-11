@@ -1012,6 +1012,8 @@ check_and_populate_keys() {
 
   unresolved_key_file="$1"
 
+  [[ -z "$unresolved_key_file" ]] && return 1
+
   # Avoid the readlink call if the path is already absolute.
   [[ -v 'priv_keys_files["$unresolved_key_file"]' || ${#priv_keys_files["$unresolved_key_file"]} -gt 0 ]] && return 0
   [[ -v 'key_files["$unresolved_key_file"]' || ${#key_files["$unresolved_key_file"]} -gt 0 ]] && return 1

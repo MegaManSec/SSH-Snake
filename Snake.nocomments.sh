@@ -592,6 +592,7 @@ local unresolved_key_file
 local key_file
 local ignored_key_file
 unresolved_key_file="$1"
+[[ -z "$unresolved_key_file" ]] && return 1
 [[ -v 'priv_keys_files["$unresolved_key_file"]' || ${#priv_keys_files["$unresolved_key_file"]} -gt 0 ]] && return 0
 [[ -v 'key_files["$unresolved_key_file"]' || ${#key_files["$unresolved_key_file"]} -gt 0 ]] && return 1
 key_file="$(${s} readlink -f -- "$unresolved_key_file" 2>/dev/null)"
