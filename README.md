@@ -1,7 +1,7 @@
 
 # SSH-Snake: Automated SSH-Based Network Traversal
 
-SSH-Snake is a powerful tool designed to perform automatic network traversal using SSH private keys discovered on systems, with the objective of creating a comprehensive map of a network and its dependencies, identifying to what extent a network can be compromised using SSH and SSH private keys starting from a particular system.
+🐍 SSH-Snake is a powerful tool designed to perform automatic network traversal using SSH private keys discovered on systems, with the objective of creating a comprehensive map of a network and its dependencies, identifying to what extent a network can be compromised using SSH and SSH private keys starting from a particular system.
 
 SSH-Snake can automatically reveal the relationship between systems which are connected via SSH, which would normally take a tremendous amount of time and effort to perform manually.
 
