@@ -90,7 +90,7 @@ Since hosts do not correspond to destinations, it is necessary for hosts to some
 1. `use_combinate_interesting_users_hosts` is enabled and there is at least one entry in _interesting_users_,
 2. `use_combinate_users_hosts_aggressive` is enabled.
 
-`use_combinate_interesting_users_hosts` will combine all of the _interesting_users_ with all of the hosts discovered to create destinations, and `use_combinate_users_hosts_aggressive` will combine all users discovered with all of the hosts discovered to creation destinations. That process is described in [combinatorial_destination_discovery_strategies](combinatorial-destination-discovery-strategies).
+`use_combinate_interesting_users_hosts` will combine all of the _interesting_users_ with all of the hosts discovered to create destinations, and `use_combinate_users_hosts_aggressive` will combine all users discovered with all of the hosts discovered to creation destinations. That process is described in [combinatorial_destination_discovery_strategies](#combinatorial-destination-discovery-strategies).
 
 ### use_find_from_hosts
 
