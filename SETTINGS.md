@@ -15,7 +15,7 @@ If set to 1, the script will attempt to use `sudo` to elevate its privileges. If
 
 Default: 3
 
-The connection timeout (in seconds) for SSH. See `ssh_config(5)`'s _ConnectTimeout_.
+The connection timeout (in seconds) for SSH connections __and DNS resolution__. See `ssh_config(5)`'s _ConnectTimeout_.
 
 ## retry_count
 
@@ -63,7 +63,7 @@ This list also supports sudo (if available), and can be used by using `${s}` as 
 
 SSH-Snake comes with various configurable strategies (functions) which can be used to discover SSH private keys on a system and discover hosts and destinations to attempt to connect to. Sane defaults have been provided, however if you want to perform a scan as thoroughly as possible, then enabling more discovery techniques can help. With the exception of one strategy (`find_ssh_keys`), each of these strategies can be toggled off/on. Below are details of each of the strategies.
 
-Detailed explanations of how each of these strategies work can be found in [this blog post](https://joshua.hu/more-fun-with-bash-ssh-and-ssh-keygen-version-differences).
+Detailed technical explanations of how some of these strategies work can be found in [this blog post](https://joshua.hu/ssh-snake-ssh-network-traversal-discover-ssh-private-keys-network-graph).
 
 ## SSH Private Key Discovery Strategies
 
