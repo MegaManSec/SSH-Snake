@@ -98,6 +98,8 @@ The raw output of SSH-Snake contains a mix of infomation about discovered privat
 
 A detailed explanation on the full output of SSH-Snake can be found in [OUTPUT.md](OUTPUT.md).
 
+An example of an output can be found in [example-output.log](/example-output.log).
+
 # Visualizing System Relationships
 
 The output of SSH-Snake can be used to create graphs/visualizations of the network that the script traverses.
