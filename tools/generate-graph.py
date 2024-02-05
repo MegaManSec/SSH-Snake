@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# <https://github.com/MegaManSec/SSH-Snake>
+# By Joshua Rogers <https://joshua.hu/>
+# GPL 3, of course.
+
 import argparse
 import re
 from collections import defaultdict
