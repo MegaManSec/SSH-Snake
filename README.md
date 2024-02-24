@@ -94,7 +94,7 @@ SSH-Snake also comes with a variety configurable/plug-and-play strategies (funct
 
 # Understanding Output
 
-The raw output of SSH-Snake contains a mix of infomation about discovered private keys, destinations, and error messages.
+The raw output of SSH-Snake contains a mix of information about discovered private keys, destinations, and error messages.
 
 A detailed explanation on the full output of SSH-Snake can be found in [OUTPUT.md](OUTPUT.md).
 
