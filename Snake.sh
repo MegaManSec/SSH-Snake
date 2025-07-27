@@ -184,7 +184,7 @@ use_combinate_users_hosts_aggressive=0 # [0|1]: Combine all found usernames with
 
 
 export LC_ALL="C"
-export PATH="$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/bin"
+export PATH="$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 declare -A priv_keys
 declare -A key_files

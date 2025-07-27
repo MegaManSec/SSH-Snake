@@ -28,7 +28,7 @@ interesting_dests=()
 use_combinate_interesting_users_hosts=1
 use_combinate_users_hosts_aggressive=0
 export LC_ALL="C"
-export PATH="$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/bin"
+export PATH="$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 declare -A priv_keys
 declare -A key_files
 declare -A home_folders
