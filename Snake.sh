@@ -621,7 +621,7 @@ check_startup() {
   fi
 
   if [[ -n "$missing_command" ]]; then
-    printf "INTERNAL_MSG: command not found: %s\n" "$required_command"
+    printf "INTERNAL_MSG: command not found: %s\n" "$missing_command"
     exit 1
   fi
 

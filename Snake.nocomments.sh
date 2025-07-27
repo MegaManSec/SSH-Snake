@@ -365,7 +365,7 @@ fin_root
 exit 0
 fi
 if [[ -n "$missing_command" ]]; then
-printf "INTERNAL_MSG: command not found: %s\n" "$required_command"
+printf "INTERNAL_MSG: command not found: %s\n" "$missing_command"
 exit 1
 fi
 if ! printf "%s" "$script" | base64 -d >/dev/null 2>&1; then
