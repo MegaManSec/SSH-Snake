@@ -1356,8 +1356,7 @@ find_from_last() {
 
   while IFS= read -r ssh_dest; do
     add_ssh_dest "$ssh_dest"
-  done < <(last -aiw 2>/dev/null | grep -v reboot | awk '/\./ {print $1":"$NF}' | sort | uniq)
-
+  done < <(last -aiw 2>/dev/null | grep -v reboot | awk '/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ {print $1"@"$NF}' | sort | uniq)
 }
 
 # known_hosts contains a list of hosts that have previously been connected to.
