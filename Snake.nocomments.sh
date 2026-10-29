@@ -168,13 +168,13 @@ printf "%s" "$ssh_dest" | awk -F'[@():]' -v OFS='@' '
 user = $1
 for (i = 2; i <= NF; i++) {
 if ($i != "" && user != "") {
-print "\\x22" user "@" $i "\\x22"
+print "\"" user "@" $i "\""
  }
  }
  }'
 done
 for ssh_dest in "${!root_ssh_hosts_dests[@]}"; do
-printf "\\\x22%s\\\x22\n" "$ssh_dest"
+printf '"%s"\n' "$ssh_dest"
 done
 }
 shape_script() {
@@ -768,7 +768,7 @@ done
 find_user_from_file() {
 local home_folder
 for home_folder in "${!home_folders[@]}"; do
-if [[ "$1" == "$home_folder"* ]]; then
+if [[ "$1" == "$home_folder"/* ]]; then
 basename -- "$home_folder"
 return
 fi
@@ -777,17 +777,14 @@ done
 find_from_authorized_keys() {
 local ssh_file
 for ssh_file in "${!ssh_files[@]}"; do
-local ssh_address
+local ssh_host
 local home_user
 [[ -z "$ssh_file" ]] && continue
 home_user="$(find_user_from_file "$ssh_file")"
-while IFS= read -r ssh_address; do
-local ssh_host
-[[ -z "$ssh_address" ]] && continue
 while IFS= read -r ssh_host; do
+[[ -z "$ssh_host" ]] && continue
 add_ssh_host "$ssh_host"
 [[ -n "$home_user" ]] && add_ssh_dest "$home_user@$ssh_host"
-done < <(echo "$ssh_address" | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort | uniq)
 done < <(${s} grep -F 'from=' -- "$ssh_file" 2>/dev/null | awk -F"\\\'|\\\"" '{print $2}' | tr ',' '\n' | sort | uniq)
 done
 }
@@ -796,7 +793,7 @@ local ssh_dest
 last -aiw >/dev/null 2>&1 || return
 while IFS= read -r ssh_dest; do
 add_ssh_dest "$ssh_dest"
-done < <(last -aiw 2>/dev/null | grep -v reboot | awk '/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/ {print $1"@"$NF}' | sort | uniq)
+done < <(last -aiw 2>/dev/null | grep -v reboot | awk '$NF ~ /\./ {print $1"@"$NF}' | sort | uniq)
 }
 find_from_known_hosts() {
 local ssh_file
@@ -1037,7 +1034,7 @@ resolved_ssh_hosts="$($res "$ssh_host" 2>/dev/null | awk '/ip_address:/{print $N
 else
 resolved_ssh_hosts="$($res "$ssh_host" 2>/dev/null | awk '/RAW/{print $1}')"
 fi
-for resolved_ssh_host in "${resolved_ssh_hosts[@]}"; do
+while IFS= read -r resolved_ssh_host; do
 if [[ "${resolved_ssh_host:0:1}" =~ [12] ]]; then
 [[ "$resolved_ssh_host" =~ ^127\. ]] && resolved_ssh_host="127.0.0.1"
 [[ -v '_ignored_hosts["$resolved_ssh_host"]' || ${#_ignored_hosts["$resolved_ssh_host"]} -gt 0 ]] && continue
@@ -1045,7 +1042,7 @@ resolved_hosts["$ssh_host"]+="$resolved_ssh_host "
 else
 [[ -n "$resolved_ssh_host" ]] && _ignored_hosts["$resolved_ssh_host"]=1
 fi
-done
+done < <(printf '%s\n' "$resolved_ssh_hosts")
 fi
 if [[ "${#resolved_hosts["$ssh_host"]}" -lt 7 ]]; then
 _ignored_hosts["$ssh_host"]=1
@@ -1305,8 +1302,9 @@ for ssh_dest in "${!retry_dests[@]}"; do
 is_ssh_dest "$ssh_dest" && ssh_dests["$ssh_dest"]=1
 done
 for priv_key in "${!retry_keys[@]}"; do
-[[ -v '_ignored_key_files["$priv_key"]' || ${#_ignored_key_files["$priv_key"]} -gt 0 ]] && continue
-priv_keys["$priv_key"]="${retry_keys["$priv_key"]}"
+key_file="${retry_keys["$priv_key"]}"
+[[ -v '_ignored_key_files["$key_file"]' || ${#_ignored_key_files["$key_file"]} -gt 0 ]] && continue
+priv_keys["$priv_key"]="$key_file"
 done
 (( ${#ssh_dests[@]} )) || return
 (( ${#priv_keys[@]} )) || return
