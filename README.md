@@ -74,7 +74,7 @@ SSH-Snake has been tested on various flavors of Linux, and MacOS (with Homebrew 
 # Features
 
 - Recursively SSH from one system to another using local SSH private keys,
-- Fileless traversal and propogation/replication of the SSH-Snake script using only stdin and bash arguments to remote systems,
+- Fileless traversal and propagation/replication of the SSH-Snake script using only stdin and bash arguments to remote systems,
 - Automatic elevation of privileges to root using sudo if possible,
 - Discover SSH private key files from `.bash_history` entries,
 - Discover SSH private keys from commonly used files and folders,
@@ -83,7 +83,7 @@ SSH-Snake has been tested on various flavors of Linux, and MacOS (with Homebrew 
 - Plug-and-play modular system to discover private keys and systems,
 - Detect hosts from IP ranges, last logins, known hosts, SSH config files, and more,
 - Ability to detect when a system has already been scanned or is in the process of being scanned such that a network like A->B->C is able to also discover C->A but does not regress to A->B->C-A->B->C->A->B->....,
-- Ability to generate graphical visulizations of a network from the output of the script,
+- Ability to generate graphical visualizations of a network from the output of the script,
 - ... and more.
 
 # Settings
@@ -94,7 +94,7 @@ SSH-Snake also comes with a variety configurable/plug-and-play strategies (funct
 
 # Understanding Output
 
-The raw output of SSH-Snake contains a mix of infomation about discovered private keys, destinations, and error messages.
+The raw output of SSH-Snake contains a mix of information about discovered private keys, destinations, and error messages.
 
 A detailed explanation on the full output of SSH-Snake can be found in [OUTPUT.md](OUTPUT.md).
 
@@ -134,9 +134,9 @@ To cut down on the size such that it remains 100% fileless, Snake.nocomments.sh 
 
 # Bugs / Issues
 
-If you encounter any bugs or issues related to the script, please report them as a GitHub issue. Please include your configuration setings.
+If you encounter any bugs or issues related to the script, please report them as a GitHub issue. Please include your configuration settings.
 
-I am particually interested in any interesting `[line]` outputs associated with errors that haven't been caught by the script.
+I am particularly interested in any interesting `[line]` outputs associated with errors that haven't been caught by the script.
 
 # Limitations
 

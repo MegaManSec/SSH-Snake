@@ -101,7 +101,7 @@ use_find_from_ignore_list=0 # [0|2]
 # Since C has already been scanned, it won't be scanned again, thus losing the valuable data of C->D.
 #
 # Therefore, we have a completely different strategy.
-# Once the scan is completely finished (i.e. the inital script that a human runs), the whole scan completely re-runs with each of the previously discovered destinations added to interesting_dests().
+# Once the scan is completely finished (i.e. the initial script that a human runs), the whole scan completely re-runs with each of the previously discovered destinations added to interesting_dests().
 # Effectively, this means that every destination will be scanned by every other destination. at least once.
 # On the re-run, we do NOT attempt to discover any NEW users/hosts/dests, only discover keys. This means that although new chains may be discovered, no new destinations will be discovered.
 # Note: it is also possible that new destinations will be discovered with this method, due to some strange network routing, however this is not intentional. (see XXX: Should we report that this is a NEW destination?)
@@ -674,7 +674,7 @@ check_ssh_options() {
 #
 # Firstly, define the current destination's address as the concatenation of all of its ipv4 addresses: IP_1:IP_2:IP_3. The output of that will be:
 # user@(IP_1:IP_2:IP_3)[keyfile]->user@(IP_1:IP_2:IP_3)[keyfile]->user@(IP_1:IP_2:IP_3)....
-# This output isn't particuarly useful for using to actually connect to hosts using the data, but it is useful for creating graphs (because each destination will correspond to a collection of ip addresses).
+# This output isn't particularly useful for using to actually connect to hosts using the data, but it is useful for creating graphs (because each destination will correspond to a collection of ip addresses).
 # This format of ip address is also useful for the script to determine whether a destination has already been scanned or not (aka whether the destination are in the ignore_list).
 # Therefore, we split all ips for this host and add a separator ":", which we use for the ignore_list as well.
 #
@@ -724,10 +724,10 @@ init_current_ips() {
 # Initialize this server/destination's chains.
 # Using both chains provided to the script by the $2 and $5 arguments, we combine them with the current username and ip addresses, separated by ->.
 init_chains() {
-  # Initalize the hosts_chain. This chain is the real pathway we used to access this server/destination.
+  # Initialize the hosts_chain. This chain is the real pathway we used to access this server/destination.
   # For example, user@host[key]->user@host.
   hosts_chain="$hosts_chain${hosts_chain:+->}$user@$this_host"
-  # Initalize the hostnames_chain. This chain is not the exact pathway in the network sense, but rather the pathway of unique servers (independent of the ip address we used to access them).
+  # Initialize the hostnames_chain. This chain is not the exact pathway in the network sense, but rather the pathway of unique servers (independent of the ip address we used to access them).
   # For example, user@(host)[key]->user@(host:host:host:host)
   hostnames_chain="$hostnames_chain${hostnames_chain:+->}$user@($current_hostnames_ip)"
 }
@@ -1018,7 +1018,7 @@ check_and_populate_keys() {
   [[ -v 'priv_keys_files["$unresolved_key_file"]' || ${#priv_keys_files["$unresolved_key_file"]} -gt 0 ]] && return 0
   [[ -v 'key_files["$unresolved_key_file"]' || ${#key_files["$unresolved_key_file"]} -gt 0 ]] && return 1
 
-  key_file="$(${s} readlink -f -- "$unresolved_key_file" 2>/dev/null)" # use sudo because it may be a symlink in a priviliged location, not that it would really matter (ssh will just use the symlink)
+  key_file="$(${s} readlink -f -- "$unresolved_key_file" 2>/dev/null)" # use sudo because it may be a symlink in a privileged location, not that it would really matter (ssh will just use the symlink)
 
   [[ -z "$key_file" ]] && key_files["$unresolved_key_file"]=1 && return 1
 
