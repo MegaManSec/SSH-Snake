@@ -13,7 +13,7 @@ python3 tools/generate-graph.py --with-users --file SSHSnake.log --format dot
 circo -Tpng -Goverlap=false -Gsplines=true -Gconcentrate=true -Gnodesep=0.1 -Goverlap=false SSHSnake_dot_file.dot -o SSH-Snake-dot-circo.png
 ```
 
-which first generates a [dot file](https://en.wikipedia.org/wiki/DOT_(graph_description_language), then uses [graphviz' circo](https://graphviz.org/docs/layouts/circo/) to generate a PNG.
+which first generates a [dot file](https://en.wikipedia.org/wiki/DOT_(graph_description_language)), then uses [graphviz' circo](https://graphviz.org/docs/layouts/circo/) to generate a PNG.
 
 ---
 
